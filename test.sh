@@ -569,6 +569,15 @@ check "blocks ANSI-C octal" "$(sec "cat \$'.e\\156v'")" "2"
 check "blocks ANSI-C hex" "$(sec "cat \$'\\x2eenv'")" "2"
 check "ordinary brace lists still pass" "$(sec 'ls src/{a,b}.ts')" "0"
 
+section "v2: secrets guard — fails closed, without over-blocking"
+PAD="$(printf "\$'a' %.0s" $(seq 1 40))"
+check "40 decoy \$'…' segments can't push a secret past the cap" "$(sec "echo $PAD; cat \$'.e\\156v'")" "2"
+check "an unterminated \$' is blocked" "$(sec "cat \$'abc\\")" "2"
+check "brace list inside a subshell is expanded" "$(sec 'cat $(echo .{e,x}nv)')" "2"
+check "jq object braces pass" "$(sec "jq 'map({id})' f.json")" "0"
+check "php -r code with braces passes" "$(sec "php -r 'foreach([1,2] as \$a){echo \$a;}'")" "0"
+check "awk program passes" "$(sec "awk '{print \$1}' f")" "0"
+
 # ---------------------------------------------------------------- summary -----
 printf '\n%s\n' "-----------------------------------------"
 if [ "$FAIL" -eq 0 ]; then
