@@ -21,7 +21,9 @@ MODE="${LARAVEL_WF_VERIFY:-syntax}"
 BASELINE="$ROOT/.claude/.cache/analyse-baseline"
 # raw format is "path:line:message" — drop the line number, which moves as code is edited
 normalize() { sed -nE 's/^(.+):[0-9]+:(.*)$/\1: \2/p' | sort -u; }
-analyse() { eval "$(bash "$SELF_DIR/stack.sh")"; [ -n "${CMD_ANALYSE:-}" ] || return 0
+# Last line of defence: only ever eval a command made of plain words.
+cmd_ok() { [[ "$1" =~ ^[A-Za-z0-9\ ._/:=-]*$ ]]; }
+analyse() { eval "$(bash "$SELF_DIR/stack.sh")"; cmd_ok "${CMD_ANALYSE:-}" || return 0; [ -n "${CMD_ANALYSE:-}" ] || return 0
             (cd "$ROOT" && eval "$CMD_ANALYSE --error-format=raw --no-progress" 2>&1); }
 
 if [ "${1:-}" = --baseline ]; then

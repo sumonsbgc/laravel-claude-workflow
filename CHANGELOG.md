@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1 — 2026-10-15
+Security fixes from the automated commit reviews (all reproduced first, then fixed and regression-tested):
+- verify.sh: a tampered `.claude/.cache/stack.env` could inject a command through `CMD_*` values (a redirect passed the old charset and was `eval`d). Commands now use a strict charset (letters, digits, space, `._/:=-`), the cache check rejects any `CMD_` line outside it, and verify.sh refuses to eval one.
+- stack.sh: the cache is accepted only if every line is one of the exact keys the script writes; a cache that sets `PATH`, `IFS`, `BASH_ENV` or anything else is rejected whole.
+- tasks.sh diff: secret files (`.env*`, keys, `auth.json`) are never printed (the diff is read by an agent); their names are listed as changed.
+- guard-secrets: the `cp .env.example …` exemption no longer applies to commands with quotes or backslashes (a quoted target could overwrite an existing `.env.local`); the backslash filter now matches a single backslash.
+
 ## 2.0.0 — 2026-10-15
 Brings every next-workflow 2.x improvement to Laravel, plus Laravel-specific additions.
 

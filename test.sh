@@ -540,6 +540,29 @@ contains "$(cat "$EV/run.sh")" "--reference" "harness can prove its checks"
 ls "$EV"/results/*-reference.json >/dev/null 2>&1 && ok "a reference run is on record" || bad "no reference run on record"
 bash -n "$EV/run.sh" && ok "run.sh parses" || bad "run.sh does not parse"
 
+section "v2: security review — cached commands and task diffs"
+CI="$TMP/ci"; lproj "$CI"; mkdir -p "$CI/.claude/.cache" "$CI/app"
+printf 'LARAVEL_VERSION="v13.0.0"\nCMD_ANALYSE="true > %s/pwned"\n' "$CI" > "$CI/.claude/.cache/stack.env"
+echo "$CI/app/A.php" > "$CI/.claude/.cache/dirty-files"; printf '<?php\n' > "$CI/app/A.php"
+printf '{"stop_hook_active":false}' | CLAUDE_PROJECT_DIR="$CI" LARAVEL_WF_VERIFY=syntax,analyse bash "$H/verify.sh" >/dev/null 2>&1
+[ -e "$CI/pwned" ] && bad "a tampered cached command was executed" || ok "a tampered cached command is never executed"
+lacks "$(CLAUDE_PROJECT_DIR="$P" LARAVEL_WF_NO_CACHE=1 bash "$H/stack.sh" | grep '^CMD_')" "|" "commands are written in the strict charset"
+SD2="$TMP/sd2"; mkdir -p "$SD2/tasks"; ( cd "$SD2" && git init -q && git config user.email t@t && git config user.name t && echo "SECRET=old" > .env && printf -- '---\nid: 001\ntitle: x\nstatus: todo\n---\n' > tasks/001-x.md && git add -A && git commit -qm i )
+CLAUDE_PROJECT_DIR="$SD2" bash "$H/tasks.sh" start 001 >/dev/null; echo "SECRET=new-value" > "$SD2/.env"
+O="$(CLAUDE_PROJECT_DIR="$SD2" bash "$H/tasks.sh" diff 001)"
+lacks "$O" "new-value" "task diff never prints a secret file's content"
+contains "$O" "secret files changed" "task diff names the changed secret file"
+
+section "v2: security review — cache keys and quoted cp"
+KEYS_RE="$(sed -n "s/^CACHE_KEYS='\(.*\)'$/\1/p" "$H/stack.sh")"
+MISSING="$(CLAUDE_PROJECT_DIR="$P" LARAVEL_WF_NO_CACHE=1 bash "$H/stack.sh" | sed -n 's/^\([A-Z_]*\)=.*/\1/p' | grep -v '^DESIGN_SKILL$' | grep -vxE "$KEYS_RE" || true)"
+check "every key stack.sh writes is in the cache allow-list" "$MISSING" ""
+CK="$TMP/ck"; lproj "$CK"; mkdir -p "$CK/.claude/.cache"
+printf 'LARAVEL_VERSION="v13.0.0"\nPATH="/nonexistent"\n' > "$CK/.claude/.cache/stack.env"; touch "$CK/.claude/.cache/stack.env"
+lacks "$(CLAUDE_PROJECT_DIR="$CK" bash "$H/stack.sh")" "/nonexistent" "a cache that sets PATH is rejected"
+QC="$TMP/qc"; mkdir -p "$QC"; echo SECRET > "$QC/.env.local"
+check "quoted cp onto an existing .env.local is blocked" "$(cd "$QC" && sec 'cp .env.example ".env.local"' "$QC")" "2"
+
 # ---------------------------------------------------------------- summary -----
 printf '\n%s\n' "-----------------------------------------"
 if [ "$FAIL" -eq 0 ]; then

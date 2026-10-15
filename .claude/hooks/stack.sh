@@ -25,8 +25,15 @@ design_skill() {
 # Every consumer `eval`s this output, and values come from composer.json/.env — repo content,
 # not ours. Reduce each value to a charset that cannot carry shell syntax ($, `, ", \, ;, newline).
 safe() { printf '%s' "$1" | tr -cd 'A-Za-z0-9 ._~^<>=|@/:+,*-'; }
+# Commands (CMD_*) are later `eval`'d, so they get a far stricter charset: no pipes, redirects,
+# `&`, globs or quotes — nothing that can chain a second command. Versions keep the wider set.
+safecmd() { printf '%s' "$1" | tr -cd 'A-Za-z0-9 ._/:=-'; }
 # A cache line is trusted only if it has exactly the shape this script writes.
-cache_ok() { ! grep -qvE '^[A-Z_]+="[A-Za-z0-9 ._~^<>=|@/:+,*-]*"$' "$1"; }
+# Only the exact keys this script writes are accepted: a cache that sets PATH, IFS, BASH_ENV or
+# any other variable is rejected whole (every hook evals this output, then runs commands).
+CACHE_KEYS='ADMIN_PANEL|AI_RULES|ALPINE_VERSION|ASSET_BUILD|AUTH_STACK|BOOST|BOOST_MCP|BOOTSTRAP_VERSION|CACHE_SERIALIZABLE|CACHE_STORE|CDN_URL|CMD_ANALYSE|CMD_BUILD|CMD_DEV|CMD_FORMAT|CMD_LINT|CMD_MIGRATE|CMD_TEST|DB_CONNECTION|DIR_ACTIONS|DIR_COMPOSERS|DIR_LIVEWIRE|DIR_OBSERVERS|DIR_POLICIES|DIR_SERVICES|FS_DISK|IMAGES|LARAVEL_MAJOR|LARAVEL_VERSION|LIVEWIRE_VERSION|PERMISSIONS|PHP_EXT|PHP_REQUIRED|PHP_VERSION|PINT|QUEUE_CONNECTION|REDIS_CLIENT|RICH_EDITOR|ROUTE_FILES|SESSION_DRIVER|STATIC_ANALYSIS|STATIC_CONFIG|TAILWIND_INSTALLED|TAILWIND_VERSION|TEST_RUNNER|TEST_VERSION|VIEW_LAYER'
+cache_ok() { ! grep -qvE "^($CACHE_KEYS)=\"[A-Za-z0-9 ._~^<>=|@/:+,*-]*\"\$" "$1" &&
+             ! grep -qE '^CMD_[A-Z_]+="[^"]*[^A-Za-z0-9 ._/:="-][^"]*"$' "$1"; }
 
 if [ "${LARAVEL_WF_NO_CACHE:-0}" != 1 ] && [ -f "$CACHE" ] && [ -f "$COMPOSER" ] && cache_ok "$CACHE" &&
    [ "$CACHE" -nt "$COMPOSER" ] &&
@@ -218,7 +225,8 @@ fi
     "DIR_POLICIES=$HAS_POLICIES" "DIR_OBSERVERS=$HAS_OBSERVERS" "DIR_COMPOSERS=$HAS_COMPOSERS" \
     "DIR_LIVEWIRE=$HAS_LIVEWIRE" "CMD_TEST=$TEST" "CMD_LINT=$LINT" "CMD_FORMAT=$FORMAT" \
     "CMD_ANALYSE=$ANALYSE" "CMD_BUILD=$BUILD" "CMD_DEV=$DEV" "CMD_MIGRATE=$MIGRATE"; do
-    printf '%s="%s"\n' "${kv%%=*}" "$(safe "${kv#*=}")"
+    case "$kv" in CMD_*) v="$(safecmd "${kv#*=}")" ;; *) v="$(safe "${kv#*=}")" ;; esac
+    printf '%s="%s"\n' "${kv%%=*}" "$v"
   done
 } | tee "$CACHE" 2>/dev/null
 design_skill
