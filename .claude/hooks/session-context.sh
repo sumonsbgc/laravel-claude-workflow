@@ -85,14 +85,15 @@ TEXT="Detected stack (laravel-workflow $KIT_VERSION, auto-detected at session st
 - $VERREF
 - View layer: $VIEW_LAYER${LIVEWIRE_VERSION:+ $LIVEWIRE_VERSION}${ALPINE_VERSION:+ | Alpine.js $ALPINE_VERSION} | CSS: $CSS${ASSET_BUILD:+ | assets: $ASSET_BUILD}
 - Routes: ${ROUTE_FILES:-none} | App layers present: ${LAYERS:-controllers + models only}
-- Drivers: db=${DB_CONNECTION:-?} cache=${CACHE_STORE:-?} queue=${QUEUE_CONNECTION:-?} session=${SESSION_DRIVER:-?}${REDIS_CLIENT:+ | redis client: $REDIS_CLIENT} | php ext: ${PHP_EXT:-none of redis/gd/imagick}
-- Post/Page content editor: ${RICH_EDITOR:-none installed} — kit rule: Post/Page modules use the Gutenberg block editor (blade-conventions/references/block-editor.md), never CKEditor/TinyMCE/Summernote/Quill.
+- Drivers: db=${DB_CONNECTION:-?} cache=${CACHE_STORE:-?} queue=${QUEUE_CONNECTION:-?} session=${SESSION_DRIVER:-?}${REDIS_CLIENT:+ | redis client: $REDIS_CLIENT} | php ext: ${PHP_EXT:-none of redis/gd/imagick}${RICH_EDITOR:+
+- Rich-text editor: $RICH_EDITOR}
 - Files: disk=${FS_DISK:-local}${S3_ADAPTER:+ | S3 adapter installed}${CDN_URL:+ | AWS_URL (CDN host) set} | images: ${IMAGES:-no image library}
 - Auth: ${AUTH_STACK:-hand-rolled or none detected}${PERMISSIONS:+ | permissions: $PERMISSIONS}${ADMIN_PANEL:+ | admin panel: $ADMIN_PANEL}
 - Tests: ${TEST_RUNNER:-none}${TEST_VERSION:+ $TEST_VERSION} | Formatter: $FORMATTER | Static analysis: ${STATIC_ANALYSIS:-none}${DESIGN_SKILL:+
 - Design: the \`frontend-design\` skill is available — load it when building new UI or restyling, and not for refactors, fixes, or views that must match existing siblings.}
-- Verify commands: test=\`${CMD_TEST:-n/a}\` lint=\`${CMD_LINT:-n/a}\` analyse=\`${CMD_ANALYSE:-n/a}\` build=\`${CMD_BUILD:-n/a}\` dev=\`${CMD_DEV}\`$TASKS
+- Verify commands: test=\`${CMD_TEST:-n/a}\` lint=\`${CMD_LINT:-n/a}\` analyse=\`${CMD_ANALYSE:-n/a}\` build=\`${CMD_BUILD:-n/a}\` dev=\`${CMD_DEV}\`
+- Repo map: \`bash $HELPERS/tasks.sh map\` prints models with relations, controllers with actions, routes, tables and views (cached, regenerated when files change). Read it before exploring with grep/ls.
 
-Use these exact commands rather than inventing them. Do not add a package that is not listed here — no Livewire in a Blade+Alpine project, no spatie/laravel-permission over a hand-rolled RBAC, no Tailwind classes if Tailwind is absent. Write classes for the installed Tailwind version only; a utility from a newer minor silently emits no CSS. Never call \`env()\` outside \`config/\` — it returns null once config is cached in production.$CONTEXT"
+Use these exact commands rather than inventing them. Do not add a package that is not listed here — no Livewire in a Blade+Alpine project, no spatie/laravel-permission over a hand-rolled RBAC, no Tailwind classes if Tailwind is absent. Write classes for the installed Tailwind version only; a utility from a newer minor silently emits no CSS. Never call \`env()\` outside \`config/\` — it returns null once config is cached in production.$CONTEXT$TASKS"
 
 wf_context SessionStart "$TEXT"

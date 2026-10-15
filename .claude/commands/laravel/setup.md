@@ -16,7 +16,6 @@ Wire this Laravel agentic workflow into the current project. Run once per projec
    This project uses laravel-workflow. The stack and verify commands are reported at session start;
    repo conventions are in .claude/project-context.md. Plan with /laravel:write-task, approve drafts with
    `bash .claude/hooks/tasks.sh approve`, build with /laravel:task (batches: .claude/hooks/run-tasks.sh).
-   Post/Page content uses the Gutenberg block editor (blade-conventions/references/block-editor.md).
    <!-- laravel-workflow:end -->
    ```
 4. Ensure `.gitignore` contains `.claude/.cache/`.

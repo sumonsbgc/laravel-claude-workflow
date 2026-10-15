@@ -374,6 +374,12 @@ printf '<div class="invoice">{{ $invoice->total }}</div>\n' > "$G/resources/view
 check "unrelated views are not flagged" "$(raw "$G" "$G/resources/views/admin/invoice.blade.php" guard-editor.sh)" ""
 printf '{ "dependencies": { "@wordpress/block-editor": "^18.1.0" } }' > "$G/package.json"
 contains "$(CLAUDE_PROJECT_DIR="$G" LARAVEL_WF_NO_CACHE=1 bash "$H/stack.sh")" 'RICH_EDITOR="gutenberg' "stack detects the block editor"
+contains "$(CLAUDE_PROJECT_DIR="$G" LARAVEL_WF_NO_CACHE=1 bash "$H/session-context.sh")" "Rich-text editor: gutenberg" "session report names an installed editor"
+# The rule is loaded only when Post/Page work is planned or built, never into every session.
+O="$(cat "$C/setup.md")"; case "$O" in *Gutenberg*) bad "setup's CLAUDE.md block mentions Gutenberg";; *) ok "setup's CLAUDE.md block leaves Gutenberg out";; esac
+G2="$TMP/ed2"; lproj "$G2"
+O="$(CLAUDE_PROJECT_DIR="$G2" LARAVEL_WF_NO_CACHE=1 bash "$H/session-context.sh")"
+case "$O" in *Gutenberg*|*"Rich-text editor"*) bad "session report mentions an editor the project lacks";; *) ok "session report silent on editors when none is installed";; esac
 
 section "v2: guards (Laravel 13, Redis, uploads)"
 L="$TMP/g13"; lproj "$L"; mkdir -p "$L/app/Http/Controllers" "$L/app/Services" "$L/tests"
@@ -522,7 +528,6 @@ S2="$TMP/s2"; lproj "$S2"; mkdir -p "$S2/.claude"
 O="$(CLAUDE_PROJECT_DIR="$S2" LARAVEL_WF_NO_CACHE=1 bash "$H/session-context.sh")"
 contains "$O" "only the first 4000 were loaded" "oversized context flagged"
 contains "$O" "Kit helpers" "helper path reported"
-contains "$O" "Post/Page content editor" "editor rule in the report"
 contains "$O" "Files: disk=" "storage line in the report"
 
 section "v2: hook messages never execute text"
@@ -589,6 +594,36 @@ section "v2: secrets guard — brace ranges are sized, not skipped"
 check "letter range .e{n..n}v is expanded and caught" "$(sec 'cat .e{n..n}v')" "2"
 check "letter range .{d..f}nv is expanded and caught" "$(sec 'cat .{d..f}nv')" "2"
 check "small numeric ranges still pass" "$(sec 'ls x{1..5}.log')" "0"
+
+section "v2: context memory — repo map, task handoff, subagents, compaction"
+MP="$TMP/mp"; lproj "$MP"; mkdir -p "$MP/app/Models" "$MP/app/Http/Controllers" "$MP/routes" "$MP/database/migrations"
+printf "<?php\nclass News extends Model {\n  public function category(): BelongsTo { return \$this->belongsTo(Category::class); }\n}\n" > "$MP/app/Models/News.php"
+printf "<?php\nclass NewsController {}\n" > "$MP/app/Http/Controllers/NewsController.php"
+printf "<?php\nRoute::get('/news', [NewsController::class, 'index']);\n" > "$MP/routes/web.php"
+touch "$MP/database/migrations/2026_01_01_000000_create_news_table.php"
+O="$(CLAUDE_PROJECT_DIR="$MP" bash "$H/repo-map.sh")"
+contains "$O" "News — category:BelongsTo" "map lists models with relations"
+contains "$O" "NewsController" "map lists controllers"
+contains "$O" "news" "map lists tables from migrations"
+contains "$O" "/news" "map lists routes (grep fallback without vendor)"
+printf "<?php\nclass Tag extends Model {}\n" > "$MP/app/Models/Tag.php"
+contains "$(CLAUDE_PROJECT_DIR="$MP" bash "$H/repo-map.sh")" "- Tag" "map regenerates when files change"
+CX="$TMP/cx"; gproj "$CX"; export CLAUDE_PROJECT_DIR="$CX"; bash "$H/tasks.sh" init >/dev/null
+printf -- '---\nid: 001\ntitle: Base\nstatus: todo\n---\n' > "$CX/tasks/001-a.md"
+printf -- '---\nid: 002\ntitle: Next\nstatus: todo\ndepends: 001\n---\n' > "$CX/tasks/002-b.md"
+bash "$H/tasks.sh" start 001 >/dev/null; printf '<?php // svc\n' > "$CX/app/Svc.php"; bash "$H/tasks.sh" close 001 "added Svc" >/dev/null
+O="$(bash "$H/tasks.sh" context 002)"
+contains "$O" "added Svc" "context includes the dependency's log line"
+contains "$O" "app/Svc.php" "context includes the files the dependency changed"
+unset CLAUDE_PROJECT_DIR
+O="$(printf '{"agent_type":"laravel-data-layer"}' | CLAUDE_PROJECT_DIR="$P" bash "$H/subagent-context.sh")"
+contains "$O" '"hookEventName": "SubagentStart"' "subagents get the context as SubagentStart"
+contains "$O" "tasks.sh map" "subagents are told to use the map"
+SET="$(cat "$KIT/.claude/settings.json")"
+contains "$SET" "compact" "context is re-injected after compaction"
+contains "$SET" '^(laravel-.*|blade-.*)$' "SubagentStart is scoped to kit agents"
+L1="$(CLAUDE_PROJECT_DIR="$P" bash "$H/session-context.sh" | jq -r .hookSpecificOutput.additionalContext | wc -c)"
+[ "$L1" -lt 9000 ] && ok "session context stays under the 10,000-char hook cap ($L1)" || bad "session context over the hook cap ($L1)"
 
 # ---------------------------------------------------------------- summary -----
 printf '\n%s\n' "-----------------------------------------"

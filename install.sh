@@ -50,7 +50,7 @@ fi
 
 # Kit-owned hook commands, matched by script name: dropped before merging (so upgrades never
 # stack duplicates) and removed on uninstall.
-KIT_HOOKS_RE='\.claude/hooks/(session-context|guard-php|guard-blade|guard-styles|guard-editor|format|post-edit|bash-guard|guard-secrets|verify)\.sh'
+KIT_HOOKS_RE='\.claude/hooks/(session-context|guard-php|guard-blade|guard-styles|guard-editor|format|post-edit|bash-guard|guard-secrets|verify|subagent-context)\.sh'
 # Permission rules earlier kit versions shipped and this one deliberately removed. A union merge
 # would keep them forever, so they're dropped from the existing settings on every install.
 RETIRED='["Read(//home/**)","Bash(npm run dev:*)","Bash(npm run build:*)","Bash(vendor/bin/phpstan:*)","Bash(php artisan migrate --pretend:*)","Bash(php artisan config:clear:*)","Bash(php artisan view:clear:*)","Bash(php artisan migrate:status:*)"]'
@@ -69,7 +69,7 @@ if [ "$UNINSTALL" = 1 ]; then
   printf '\nRemoving laravel-workflow from %s\n\n' "$DEST"
   run "rm -rf '$DEST/commands/laravel' '$DEST/skills/laravel-conventions' '$DEST/skills/blade-conventions' '$DEST/skills/php-conventions'"
   run "rm -f '$DEST/agents/'laravel-*.md '$DEST/agents/'blade-*.md '$DEST/laravel-workflow.version' '$DEST/verify.playwright.config.mjs'"
-  for h in _lib stack tasks session-context guard-php guard-blade guard-styles guard-editor format post-edit bash-guard guard-secrets verify verify-browser run-tasks; do
+  for h in _lib stack tasks session-context guard-php guard-blade guard-styles guard-editor format post-edit bash-guard guard-secrets verify verify-browser run-tasks repo-map subagent-context; do
     run "rm -f '$DEST/hooks/$h.sh'"
   done
   if [ -f "$DEST/settings.json" ] && command -v jq >/dev/null 2>&1; then
