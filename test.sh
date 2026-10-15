@@ -563,6 +563,12 @@ lacks "$(CLAUDE_PROJECT_DIR="$CK" bash "$H/stack.sh")" "/nonexistent" "a cache t
 QC="$TMP/qc"; mkdir -p "$QC"; echo SECRET > "$QC/.env.local"
 check "quoted cp onto an existing .env.local is blocked" "$(cd "$QC" && sec 'cp .env.example ".env.local"' "$QC")" "2"
 
+section "v2: secrets guard — brace expansion and ANSI-C quoting"
+check "blocks brace expansion .{e,x}nv" "$(sec 'cat .{e,x}nv')" "2"
+check "blocks ANSI-C octal" "$(sec "cat \$'.e\\156v'")" "2"
+check "blocks ANSI-C hex" "$(sec "cat \$'\\x2eenv'")" "2"
+check "ordinary brace lists still pass" "$(sec 'ls src/{a,b}.ts')" "0"
+
 # ---------------------------------------------------------------- summary -----
 printf '\n%s\n' "-----------------------------------------"
 if [ "$FAIL" -eq 0 ]; then
