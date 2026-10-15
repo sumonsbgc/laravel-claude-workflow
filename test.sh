@@ -250,12 +250,12 @@ section "tasks.sh"
 T() { CLAUDE_PROJECT_DIR="$P" bash "$HOOKS/tasks.sh" "$@" 2>&1; }
 mkdir -p "$P/.claude/templates"; cp "$KIT"/templates/*.md "$P/.claude/templates/"
 OUT="$(T init)"
-contains "$OUT" "tasks/ ready" "init scaffolds tasks/"
-[ -f "$P/tasks/TEMPLATE.md" ] && ok "copies TEMPLATE.md" || bad "no TEMPLATE.md"
+contains "$OUT" "tasks ready: .claude/tasks/" "init scaffolds .claude/tasks/"
+[ -f "$P/.claude/tasks/TEMPLATE.md" ] && ok "copies TEMPLATE.md" || bad "no TEMPLATE.md"
 [ -f "$P/.claude/project-context.md" ] && ok "creates project-context.md" || bad "no project-context.md"
-printf -- '---\nid: 001\ntitle: First\nstatus: todo\n---\n\n## Goal\nx\n' > "$P/tasks/001-first.md"
-printf -- '---\nid: 002\ntitle: Second\nstatus: todo\ndepends: 001\n---\n\n## Goal\ny\n' > "$P/tasks/002-second.md"
-printf 'Just a plan someone dropped in here.\n' > "$P/tasks/notes.md"
+printf -- '---\nid: 001\ntitle: First\nstatus: todo\n---\n\n## Goal\nx\n' > "$P/.claude/tasks/001-first.md"
+printf -- '---\nid: 002\ntitle: Second\nstatus: todo\ndepends: 001\n---\n\n## Goal\ny\n' > "$P/.claude/tasks/002-second.md"
+printf 'Just a plan someone dropped in here.\n' > "$P/.claude/tasks/notes.md"
 check "counts only real tasks" "$(T count)" "2"
 contains "$(T list)" "001    todo    First" "lists tasks with status"
 contains "$(T list)" "[blocked by deps]" "marks a task whose dependency is unfinished"
@@ -265,10 +265,10 @@ check "next returns the in-progress task" "$(basename "$(T next)")" "001-first.m
 T "done" 001 >/dev/null; check "done sets done" "$(T count "done")" "1"
 check "next unblocks the dependent task" "$(basename "$(T next)")" "002-second.md"
 T log 002 "decided to reuse the existing service" >/dev/null
-contains "$(cat "$P/tasks/002-second.md")" "## Log" "log appends under a Log heading"
+contains "$(cat "$P/.claude/tasks/002-second.md")" "## Log" "log appends under a Log heading"
 T block 002 "needs a decision" >/dev/null
 check "block sets blocked" "$(T count blocked)" "1"
-contains "$(cat "$P/tasks/002-second.md")" "blocked: needs a decision" "block records the reason"
+contains "$(cat "$P/.claude/tasks/002-second.md")" "blocked: needs a decision" "block records the reason"
 lacks "$(T list)" "notes" "ignores a file with no frontmatter"
 
 # ---------------------------------------------------------------- install -----
@@ -307,6 +307,17 @@ lproj() { # lproj <dir> [laravel-version] -> minimal Laravel project
 gproj() { lproj "$1" "${2:-13}"; ( cd "$1" && git init -q && git config user.email t@t && git config user.name t \
   && printf '.claude/.cache/\n' > .gitignore && git add -A && git commit -qm init ); }
 sec() { printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)" | CLAUDE_PROJECT_DIR="${2:-$TMP}" bash "$H/guard-secrets.sh" >/dev/null 2>&1; echo $?; }
+NL=$'\n'; GP="$TMP/globs"; mkdir -p "$GP/keys" "$GP/src"; touch "$GP/keys/server.pem"
+gsec() { printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)" | (cd "$GP" && CLAUDE_PROJECT_DIR="$GP" bash "$H/guard-secrets.sh" >/dev/null 2>&1); echo $?; }
+check "a */node_modules/* exclude is not a secret" "$(gsec "find . -not -path '*/node_modules/*' -name '*.ts'")" "0"
+check "ls src/* is allowed" "$(gsec 'ls src/*')" "0"
+check "dot globs still block (.en*)" "$(gsec 'cat .en*')" "2"
+check "cat .* still blocks" "$(gsec 'cat .*')" "2"
+check "a bare * blocks where a key really is" "$(gsec 'cat keys/*')" "2"
+check "a draft heredoc to tasks.sh new may mention .env" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'TASK'${NL}---${NL}never commit .env${NL}TASK")" "0"
+check "a command after the heredoc still blocks" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'TASK'${NL}x${NL}TASK${NL}cat .env")" "2"
+check "an unquoted heredoc still blocks" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<TASK${NL}\$(cat .env)${NL}TASK")" "2"
+check "a heredoc into bash still blocks" "$(gsec "bash <<'TASK'${NL}cat .env${NL}TASK")" "2"
 raw() { CLAUDE_PROJECT_DIR="$1" LARAVEL_WF_NO_CACHE=1 LARAVEL_WF_FILE="$2" LARAVEL_WF_RAW=1 bash "$H/$3" 2>&1; }
 rawrc() { CLAUDE_PROJECT_DIR="$1" LARAVEL_WF_NO_CACHE=1 LARAVEL_WF_FILE="$2" LARAVEL_WF_RAW=1 bash "$H/$3" >/dev/null 2>&1; echo $?; }
 
@@ -463,8 +474,8 @@ contains "$SETT" "verify.sh --baseline" "agent may not baseline its own findings
 section "v2: tasks (drafts, frontmatter, checkpoints, undo, verdicts)"
 K="$TMP/k"; gproj "$K"; export CLAUDE_PROJECT_DIR="$K"
 bash "$H/tasks.sh" init >/dev/null
-printf '# a plan, not a task\n' > "$K/tasks/footer-plan.md"
-printf -- '---\nid: 001\ntitle: Base\nstatus: draft\nsize: small\n---\n## Acceptance\n- [ ] [review] x\n' > "$K/tasks/001-a.md"
+printf '# a plan, not a task\n' > "$K/.claude/tasks/footer-plan.md"
+printf -- '---\nid: 001\ntitle: Base\nstatus: draft\nsize: small\n---\n## Acceptance\n- [ ] [review] x\n' > "$K/.claude/tasks/001-a.md"
 lacks "$(bash "$H/tasks.sh" list)" "footer-plan" "notes without frontmatter are not tasks"
 contains "$(bash "$H/tasks.sh" next 2>&1)" "no runnable task" "drafts don't run"
 bash "$H/tasks.sh" start 001 >/dev/null 2>&1; check "start refuses a draft" "$?" "1"
@@ -476,7 +487,7 @@ O="$(LARAVEL_WF_CHECKPOINT=commit bash "$H/tasks.sh" close 001 "base")"
 SH="$(git -C "$K" show --stat --format= HEAD)"
 contains "$SH" "app/A.php" "checkpoint commits the task's file"
 lacks "$SH" "notes.txt" "checkpoint leaves out pre-existing edits"
-printf -- '---\nid: 002\ntitle: Dep\nstatus: todo\ndepends: 001\n---\n' > "$K/tasks/002-b.md"
+printf -- '---\nid: 002\ntitle: Dep\nstatus: todo\ndepends: 001\n---\n' > "$K/.claude/tasks/002-b.md"
 bash "$H/tasks.sh" start 002 >/dev/null; printf 'SECRET=1\n' > "$K/.env"; printf '<?php // b\n' > "$K/app/B.php"
 HEADB="$(git -C "$K" rev-parse HEAD)"
 O="$(LARAVEL_WF_CHECKPOINT=commit bash "$H/tasks.sh" close 002 "b" 2>&1)"
@@ -513,12 +524,12 @@ contains "$SU" "my-hook.sh" "upgrade keeps the user's hooks"
 contains "$SU" "post-edit.sh" "upgrade adds the dispatcher"
 check "version stamped" "$(cat "$U/.claude/laravel-workflow.version")" "$(cat "$KIT/VERSION")"
 [ -f "$U/.claude/verify.playwright.config.mjs" ] && ok "verify config installed" || bad "verify config missing"
-mkdir -p "$U/tasks"; touch "$U/tasks/keep.md"
+mkdir -p "$U/.claude/tasks"; touch "$U/.claude/tasks/keep.md"
 bash "$KIT/install.sh" "$U" --uninstall >/dev/null 2>&1
 [ -e "$U/.claude/commands/laravel" ] && bad "uninstall removes commands" || ok "uninstall removes commands"
 lacks "$(cat "$U/.claude/settings.json")" "post-edit.sh" "uninstall removes kit hooks"
 contains "$(cat "$U/.claude/settings.json")" "my-hook.sh" "uninstall keeps user hooks"
-[ -e "$U/tasks/keep.md" ] && ok "uninstall keeps tasks/" || bad "uninstall deleted tasks/"
+[ -e "$U/.claude/tasks/keep.md" ] && ok "uninstall keeps .claude/tasks/" || bad "uninstall deleted .claude/tasks/"
 GH="$TMP/gh"; HOME="$GH" bash "$KIT/install.sh" --global >/dev/null 2>&1
 contains "$(cat "$GH/.claude/settings.json")" "Bash(bash ~/.claude/hooks/tasks.sh:*)" "global install approves ~/.claude helpers"
 
@@ -545,6 +556,35 @@ contains "$(cat "$EV/run.sh")" "--reference" "harness can prove its checks"
 ls "$EV"/results/*-reference.json >/dev/null 2>&1 && ok "a reference run is on record" || bad "no reference run on record"
 bash -n "$EV/run.sh" && ok "run.sh parses" || bad "run.sh does not parse"
 
+section "v2.2: tasks folder under .claude"
+TD="$TMP/td"; lproj "$TD"; mkdir -p "$TD/.claude/templates"; cp "$KIT"/templates/*.md "$TD/.claude/templates/"
+check "default tasks dir" "$(CLAUDE_PROJECT_DIR="$TD" bash "$H/tasks.sh" dir)" ".claude/tasks"
+CLAUDE_PROJECT_DIR="$TD" bash "$H/tasks.sh" init >/dev/null
+[ -f "$TD/.claude/tasks/TEMPLATE.md" ] && ok "init writes .claude/tasks/TEMPLATE.md" || bad "init did not write .claude/tasks"
+[ -e "$TD/tasks" ] && bad "init created a top-level tasks/" || ok "init leaves no top-level tasks/"
+check "override wins" "$(CLAUDE_PROJECT_DIR="$TD" LARAVEL_WF_TASKS_DIR=work/plan bash "$H/tasks.sh" dir)" "work/plan"
+LG="$TMP/legacy"; lproj "$LG"; mkdir -p "$LG/tasks"; cp "$KIT/templates/task.md" "$LG/tasks/TEMPLATE.md"
+printf -- '---\nid: 001\ntitle: Old layout\nstatus: todo\n---\n' > "$LG/tasks/001-old.md"; printf '/tasks\n' > "$LG/.gitignore"
+check "legacy ./tasks is still used" "$(CLAUDE_PROJECT_DIR="$LG" bash "$H/tasks.sh" dir)" "tasks"
+contains "$(CLAUDE_PROJECT_DIR="$LG" bash "$H/tasks.sh" list)" "Old layout" "legacy tasks still list"
+O="$(CLAUDE_PROJECT_DIR="$LG" bash "$H/tasks.sh" migrate 2>&1)"
+contains "$O" "moved ./tasks -> .claude/tasks" "migrate moves the folder"
+contains "$O" "will now show up in git" "migrate warns about the /tasks ignore rule"
+[ -f "$LG/.claude/tasks/001-old.md" ] && [ ! -e "$LG/tasks" ] && ok "migrated files are in place" || bad "migrate left files behind"
+contains "$(CLAUDE_PROJECT_DIR="$LG" bash "$H/tasks.sh" list)" "Old layout" "tasks list after migrate"
+CLAUDE_PROJECT_DIR="$LG" bash "$H/tasks.sh" migrate >/dev/null 2>&1; check "migrate twice refuses" "$?" "1"
+
+# tasks.sh new: drafts written by the helper (Claude Code prompts on every Write/Edit under .claude/)
+NW="$TMP/newtask"; mkdir -p "$NW"; printf '{"dependencies":{"next":"16.0.0"}}' > "$NW/package.json"; touch "$NW/artisan"
+nw() { CLAUDE_PROJECT_DIR="$NW" bash "$H/tasks.sh" new "$@" >/dev/null 2>&1; echo $?; }
+check "new writes a draft" "$(printf -- '---\nid: 001\ntitle: Footer\nstatus: draft\n---\n' | nw 001-add-footer)" "0"
+[ -f "$NW/.claude/tasks/001-add-footer.md" ] && ok "new writes into .claude/tasks" || bad "new writes into .claude/tasks"
+check "new refuses an existing id" "$(printf -- '---\nid: 001\nstatus: draft\n---\n' | nw 001-dup)" "1"
+check "new refuses a non-draft" "$(printf -- '---\nid: 002\nstatus: todo\n---\n' | nw 002-x)" "1"
+check "new refuses a mismatched id" "$(printf -- '---\nid: 003\nstatus: draft\n---\n' | nw 002-x)" "1"
+check "new refuses a path in the name" "$(printf -- '---\nid: 002\nstatus: draft\n---\n' | nw '002-../../evil')" "1"
+check "new refuses text without frontmatter" "$(printf 'notes\n' | nw 002-notes)" "1"
+
 section "v2: security review — cached commands and task diffs"
 CI="$TMP/ci"; lproj "$CI"; mkdir -p "$CI/.claude/.cache" "$CI/app"
 printf 'LARAVEL_VERSION="v13.0.0"\nCMD_ANALYSE="true > %s/pwned"\n' "$CI" > "$CI/.claude/.cache/stack.env"
@@ -552,7 +592,7 @@ echo "$CI/app/A.php" > "$CI/.claude/.cache/dirty-files"; printf '<?php\n' > "$CI
 printf '{"stop_hook_active":false}' | CLAUDE_PROJECT_DIR="$CI" LARAVEL_WF_VERIFY=syntax,analyse bash "$H/verify.sh" >/dev/null 2>&1
 [ -e "$CI/pwned" ] && bad "a tampered cached command was executed" || ok "a tampered cached command is never executed"
 lacks "$(CLAUDE_PROJECT_DIR="$P" LARAVEL_WF_NO_CACHE=1 bash "$H/stack.sh" | grep '^CMD_')" "|" "commands are written in the strict charset"
-SD2="$TMP/sd2"; mkdir -p "$SD2/tasks"; ( cd "$SD2" && git init -q && git config user.email t@t && git config user.name t && echo "SECRET=old" > .env && printf -- '---\nid: 001\ntitle: x\nstatus: todo\n---\n' > tasks/001-x.md && git add -A && git commit -qm i )
+SD2="$TMP/sd2"; mkdir -p "$SD2/.claude/tasks"; ( cd "$SD2" && git init -q && git config user.email t@t && git config user.name t && echo "SECRET=old" > .env && printf -- '---\nid: 001\ntitle: x\nstatus: todo\n---\n' > .claude/tasks/001-x.md && git add -A && git commit -qm i )
 CLAUDE_PROJECT_DIR="$SD2" bash "$H/tasks.sh" start 001 >/dev/null; echo "SECRET=new-value" > "$SD2/.env"
 O="$(CLAUDE_PROJECT_DIR="$SD2" bash "$H/tasks.sh" diff 001)"
 lacks "$O" "new-value" "task diff never prints a secret file's content"
@@ -609,8 +649,8 @@ contains "$O" "/news" "map lists routes (grep fallback without vendor)"
 printf "<?php\nclass Tag extends Model {}\n" > "$MP/app/Models/Tag.php"
 contains "$(CLAUDE_PROJECT_DIR="$MP" bash "$H/repo-map.sh")" "- Tag" "map regenerates when files change"
 CX="$TMP/cx"; gproj "$CX"; export CLAUDE_PROJECT_DIR="$CX"; bash "$H/tasks.sh" init >/dev/null
-printf -- '---\nid: 001\ntitle: Base\nstatus: todo\n---\n' > "$CX/tasks/001-a.md"
-printf -- '---\nid: 002\ntitle: Next\nstatus: todo\ndepends: 001\n---\n' > "$CX/tasks/002-b.md"
+printf -- '---\nid: 001\ntitle: Base\nstatus: todo\n---\n' > "$CX/.claude/tasks/001-a.md"
+printf -- '---\nid: 002\ntitle: Next\nstatus: todo\ndepends: 001\n---\n' > "$CX/.claude/tasks/002-b.md"
 bash "$H/tasks.sh" start 001 >/dev/null; printf '<?php // svc\n' > "$CX/app/Svc.php"; bash "$H/tasks.sh" close 001 "added Svc" >/dev/null
 O="$(bash "$H/tasks.sh" context 002)"
 contains "$O" "added Svc" "context includes the dependency's log line"

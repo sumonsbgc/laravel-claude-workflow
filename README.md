@@ -1,7 +1,7 @@
 # laravel-workflow
 
 A Claude Code kit for **Laravel + Blade** projects: three skills, eight commands, eight agents,
-and a set of hooks that stop the mistakes which only surface in production. Version 2.0.
+and a set of hooks that stop the mistakes which only surface in production. Version 2.2.
 
 It is not a Laravel application. It is a directory you install *into* one.
 
@@ -90,19 +90,23 @@ LARAVEL_WF_PHP_GUARD=warn|off       LARAVEL_WF_BLADE_GUARD=warn|off
 LARAVEL_WF_STYLE_GUARD=off          LARAVEL_WF_VERIFY=off|syntax,lint,analyse
 LARAVEL_WF_EDITOR_GUARD=off         LARAVEL_WF_SECRETS_GUARD=off
 LARAVEL_WF_CHECKPOINT=commit        LARAVEL_WF_DEV_URL=http://localhost:8000
-LARAVEL_WF_METRICS=off              LARAVEL_WF_NO_CACHE=1     LARAVEL_WF_TASKS_DIR=tasks
+LARAVEL_WF_METRICS=off              LARAVEL_WF_NO_CACHE=1     LARAVEL_WF_TASKS_DIR=.claude/tasks
 ```
 
 ## The task runner
 
-`/laravel:task` is the primary interface. `tasks/` holds one markdown file per task with
+`/laravel:task` is the primary interface. `.claude/tasks/` holds one markdown file per task with
 frontmatter (`id`, `title`, `status`, `depends`), a goal, and an acceptance list that becomes the
 definition of done. The runner reads **only** the task it is running, routes by size (most tasks
 are done directly; multi-layer ones are split across the agents), verifies proportionally, and
 appends what it learned to `.claude/project-context.md` — which is injected at every session start,
 so the next run doesn't rediscover it.
 
-Files without frontmatter are ignored, so plans and notes can live in `tasks/` safely.
+Files without frontmatter are ignored, so plans and notes can live in `.claude/tasks/` safely.
+
+Upgrading from 2.1 or earlier, where tasks lived in `./tasks`: the helpers keep using `./tasks`
+until you run `bash .claude/hooks/tasks.sh migrate`, which moves the folder. `.claude/tasks` is not
+git-ignored (only `.claude/.cache/` is), so task files are committed with the project.
 
 ## Requirements
 

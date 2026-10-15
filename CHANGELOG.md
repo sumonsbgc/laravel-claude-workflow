@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.2.0 — 2026-10-15
+- Task files live in `.claude/tasks/` instead of `./tasks/`, alongside the rest of the kit's project state. `tasks.sh init` scaffolds it there; `tasks.sh dir` prints the folder in use and the commands read it from there instead of hardcoding a path.
+- Existing projects keep working: when `.claude/tasks` doesn't exist and `./tasks` holds the kit's `TEMPLATE.md`, the helpers use `./tasks`. `tasks.sh migrate` moves it (and warns if `.gitignore` ignores `/tasks` — `.claude/tasks` is tracked). The installer says so when it finds the old layout. `LARAVEL_WF_TASKS_DIR` still overrides everything.
+- Task diffs, dirty-file snapshots and the skip-verify size check exclude whichever tasks folder is in use, not a hardcoded `tasks`.
+- `tasks.sh new <id>-<kebab-title>` writes a draft task from stdin, and `/laravel:write-task` uses it. Claude Code asks the user to approve every Write/Edit under `.claude/`, and settings allow-rules can't pre-approve those writes (docs: permission modes, "Protected paths"), so writing drafts with the Write tool would mean one prompt per task. `new` accepts only a well-formed draft: a `<id>-<kebab>` name with no path, frontmatter whose `id` matches, `status: draft`, and an id that doesn't exist yet.
+- guard-secrets: a quoted heredoc sent to `tasks.sh new` passes even when the task text mentions `.env` (exact shape only; heredocs into `bash`/`cat`, unquoted heredocs and anything after the closing delimiter are still checked).
+- guard-secrets: globs no longer false-positive. `*` can't match a leading dot, so `-not -path '*/node_modules/*'` and `ls src/*` pass; `.e*`-style patterns still block. A bare `*` blocks only where a key file actually exists (`cat keys/*`).
+- The session report counts tasks in the folder actually in use (it was still looking at `./tasks`).
+
 ## 2.1.0 — 2026-10-15
 Context memory: the kit now remembers more, so each task pays less to rediscover the codebase.
 - Repo map (`tasks.sh map`, `repo-map.sh`): a cached, script-generated map of the app (routes; components/modules or models with relations, controllers with actions, tables). Regenerated only when the files it covers change. On a real app (aark-epaper) it is ~1,100 tokens versus ~9,000 to read the models and routes it summarizes.

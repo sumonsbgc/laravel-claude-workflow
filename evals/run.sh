@@ -40,7 +40,7 @@ setup_app() { # setup_app <dir>
   ( cd "$W" && php artisan migrate:fresh --seed --force -q ) || { echo "migrate failed" >&2; return 1; }
   ( cd "$W" && git init -q && git config user.email eval@local && git config user.name eval && git add -A && git commit -qm fixture )
   bash "$KIT/install.sh" "$W" >/dev/null 2>&1 || { echo "kit install failed" >&2; return 1; }
-  mkdir -p "$W/tasks" && cp "$EVALS"/tasks/*.md "$W/tasks/"
+  mkdir -p "$W/.claude/tasks" && cp "$EVALS"/tasks/*.md "$W/.claude/tasks/"
   ( cd "$W" && git add -A && git commit -qm "kit + tasks" )
 }
 
@@ -59,8 +59,8 @@ for r in $(seq 1 "$RUNS"); do
   START=$(date +%s)
   if [ "$REF" = 1 ]; then
     cp -R "$EVALS/reference/." "$W/"
-    for t in "$W"/tasks/00[1-4]-*.md; do sed -i.bak -E 's/^status:.*/status: done/' "$t" && rm -f "$t.bak"; done
-    sed -i.bak -E 's/^status:.*/status: blocked/' "$W"/tasks/005-*.md && rm -f "$W"/tasks/005-*.md.bak
+    for t in "$W"/.claude/tasks/00[1-4]-*.md; do sed -i.bak -E 's/^status:.*/status: done/' "$t" && rm -f "$t.bak"; done
+    sed -i.bak -E 's/^status:.*/status: blocked/' "$W"/.claude/tasks/005-*.md && rm -f "$W"/.claude/tasks/005-*.md.bak
   else
     RUNNER=(bash "$W/.claude/hooks/run-tasks.sh" --checkpoint --budget "$BUDGET")
     [ "$DRY" = 1 ] && RUNNER+=(--dry-run)
@@ -76,7 +76,7 @@ for r in $(seq 1 "$RUNS"); do
   TASKS="[]"
   for c in "$EVALS"/checks/*.sh; do
     ID="$(basename "$c" .sh)"
-    ST="$(sed -n '2,/^---/p' "$W"/tasks/"$ID"-*.md 2>/dev/null | sed -nE 's/^status:[[:space:]]*([a-z]+).*/\1/p' | head -1)"
+    ST="$(sed -n '2,/^---/p' "$W"/.claude/tasks/"$ID"-*.md 2>/dev/null | sed -nE 's/^status:[[:space:]]*([a-z]+).*/\1/p' | head -1)"
     if [ "$SERVED" = 1 ] || [ "$ID" = 002 ] || [ "$ID" = 005 ]; then
       WHY="$(cd "$W" && BASE_URL="http://127.0.0.1:$PORT" STATUS="$ST" bash "$c" 2>&1)"; RC=$?
       ( cd "$W" && php artisan migrate:fresh --seed --force -q )   # checks may delete rows

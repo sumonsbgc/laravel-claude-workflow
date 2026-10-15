@@ -1,5 +1,5 @@
 ---
-description: Run a task from the tasks/ folder end to end — read it, implement it, verify it, record what was learned
+description: Run a task from the .claude/tasks/ folder end to end — read it, implement it, verify it, record what was learned
 argument-hint: [blank = next task | <id> [headless] | all | list | init]
 model: sonnet
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task, TodoWrite, Skill
@@ -18,7 +18,7 @@ Argument: **$ARGUMENTS**
 | `list` | `bash $T list` and report it. Nothing else. |
 | `init` | `bash $T init`, then report what to do next. Nothing else. |
 
-Only files with YAML frontmatter are tasks. Plans and notes that happen to live in `tasks/` are ignored by the helper — do not run them unless the user points at one.
+Only files with YAML frontmatter are tasks. Plans and notes that happen to live in the tasks folder are ignored by the helper — do not run them unless the user points at one.
 
 ## Token discipline — this is a requirement, not a preference
 
