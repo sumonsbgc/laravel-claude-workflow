@@ -1,5 +1,8 @@
 # Changelog
 
+## 2.2.1 — 2026-10-15
+- guard-secrets: the new glob shortcuts (a `*` can't match a leading dot; a bare `*` blocks only where a key file exists) now apply only to plain shell globbing. With find/rg/grep/git/tar-style matchers, `-name`/`-path`/`-g`/`--include`, dotglob/GLOBIGNORE, or a `cd`/`pushd` in the command, every pattern match blocks as before (`find . -name '*' -exec cat {} +` would have reached .env). The filesystem check resolves against the hook input's `cwd`, not the project root. Found by automated security review.
+
 ## 2.2.0 — 2026-10-15
 - Task files live in `.claude/tasks/` instead of `./tasks/`, alongside the rest of the kit's project state. `tasks.sh init` scaffolds it there; `tasks.sh dir` prints the folder in use and the commands read it from there instead of hardcoding a path.
 - Existing projects keep working: when `.claude/tasks` doesn't exist and `./tasks` holds the kit's `TEMPLATE.md`, the helpers use `./tasks`. `tasks.sh migrate` moves it (and warns if `.gitignore` ignores `/tasks` — `.claude/tasks` is tracked). The installer says so when it finds the old layout. `LARAVEL_WF_TASKS_DIR` still overrides everything.

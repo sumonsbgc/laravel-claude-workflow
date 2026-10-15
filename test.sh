@@ -309,10 +309,17 @@ gproj() { lproj "$1" "${2:-13}"; ( cd "$1" && git init -q && git config user.ema
 sec() { printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)" | CLAUDE_PROJECT_DIR="${2:-$TMP}" bash "$H/guard-secrets.sh" >/dev/null 2>&1; echo $?; }
 NL=$'\n'; GP="$TMP/globs"; mkdir -p "$GP/keys" "$GP/src"; touch "$GP/keys/server.pem"
 gsec() { printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)" | (cd "$GP" && CLAUDE_PROJECT_DIR="$GP" bash "$H/guard-secrets.sh" >/dev/null 2>&1); echo $?; }
-check "a */node_modules/* exclude is not a secret" "$(gsec "find . -not -path '*/node_modules/*' -name '*.ts'")" "0"
+check "ls */node_modules/* is not a secret" "$(gsec 'ls -d */node_modules/*')" "0"
 check "ls src/* is allowed" "$(gsec 'ls src/*')" "0"
 check "dot globs still block (.en*)" "$(gsec 'cat .en*')" "2"
 check "cat .* still blocks" "$(gsec 'cat .*')" "2"
+check "find -name '*' still blocks (find matches dotfiles)" "$(gsec "find . -name '*' -exec cat {} +")" "2"
+check "find -path '*/x/*' still blocks" "$(gsec "find . -path '*/node_modules/*'")" "2"
+check "rg -g '*' still blocks" "$(gsec "rg -uu -g '*' KEY")" "2"
+check "cd into a key folder, then a bare *: still blocks" "$(gsec 'cd keys && cat *')" "2"
+check "the check uses the hook's cwd, not the project root" "$(printf '{"cwd":"%s","tool_input":{"command":"cat *"}}' "$GP/keys" | CLAUDE_PROJECT_DIR="$GP" bash "$H/guard-secrets.sh" >/dev/null 2>&1; echo $?)" "2"
+check "dotglob changes the rules: still blocks" "$(gsec 'shopt -s dotglob; cat *')" "2"
+check "GLOBIGNORE changes the rules: still blocks" "$(gsec 'GLOBIGNORE=x; cat src/*')" "2"
 check "a bare * blocks where a key really is" "$(gsec 'cat keys/*')" "2"
 check "a draft heredoc to tasks.sh new may mention .env" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'TASK'${NL}---${NL}never commit .env${NL}TASK")" "0"
 check "a command after the heredoc still blocks" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'TASK'${NL}x${NL}TASK${NL}cat .env")" "2"
