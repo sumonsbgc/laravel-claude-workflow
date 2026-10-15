@@ -578,6 +578,13 @@ check "jq object braces pass" "$(sec "jq 'map({id})' f.json")" "0"
 check "php -r code with braces passes" "$(sec "php -r 'foreach([1,2] as \$a){echo \$a;}'")" "0"
 check "awk program passes" "$(sec "awk '{print \$1}' f")" "0"
 
+section "v2: secrets guard — bounded work (a timed-out hook doesn't block)"
+S0=$(date +%s); R="$(sec 'cat .env {1..99999999}')"; S1=$(date +%s)
+check "a huge brace range can't time the guard out (and .env is still caught)" "$R" "2"
+[ $((S1-S0)) -lt 5 ] && ok "guard stays fast on a huge range" || bad "guard stays fast on a huge range"
+S0=$(date +%s); sec 'cat {a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b}{a,b} f' >/dev/null; S1=$(date +%s)
+[ $((S1-S0)) -lt 5 ] && ok "guard stays fast on stacked brace lists" || bad "guard stays fast on stacked brace lists"
+
 # ---------------------------------------------------------------- summary -----
 printf '\n%s\n' "-----------------------------------------"
 if [ "$FAIL" -eq 0 ]; then
