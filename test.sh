@@ -17,6 +17,10 @@ check(){ if [ "$2" = "$3" ]; then ok "$1"; else bad "$1 (expected '$3', got '$2'
 contains()   { if grep -qF -- "$2" <<<"$1"; then ok "$3"; else bad "$3 (missing: $2)"; fi; }
 lacks()      { if grep -qF -- "$2" <<<"$1"; then bad "$3 (unexpectedly present: $2)"; else ok "$3"; fi; }
 section(){ printf '\n%s\n' "$1"; }
+# The suite stands in for the user's terminal, not a Claude Code session (approve/accept refuse there).
+unset CLAUDECODE
+# Sections written before the verdict gate close tasks directly; the gate has its own section below.
+export LARAVEL_WF_REQUIRE_VERDICT=off
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -64,7 +68,7 @@ for f in install.sh test.sh README.md .claude/settings.json \
   [ -f "$KIT/$f" ] && ok "exists: $f" || bad "missing: $f"
 done
 check "8 agents" "$(ls "$KIT/.claude/agents" | wc -l | tr -d ' ')" "8"
-check "8 commands" "$(ls "$KIT/.claude/commands/laravel" | wc -l | tr -d ' ')" "8"
+check "9 commands" "$(ls "$KIT/.claude/commands/laravel" | wc -l | tr -d ' ')" "9"
 for h in "$KIT"/.claude/hooks/*.sh; do
   [ -x "$h" ] && ok "executable: $(basename "$h")" || bad "not executable: $(basename "$h")"
   bash -n "$h" 2>/dev/null && ok "parses: $(basename "$h")" || bad "syntax error: $(basename "$h")"
@@ -281,7 +285,7 @@ OUT="$(bash "$KIT/install.sh" "$EMPTY" 2>&1)"; RC=$?
 check "refuses a non-Laravel target" "$RC" "1"
 OUT="$(bash "$KIT/install.sh" "$P" 2>&1)"
 check "installs 8 agents" "$(ls "$P/.claude/agents" | wc -l | tr -d ' ')" "8"
-check "installs 8 commands" "$(ls "$P/.claude/commands/laravel" | wc -l | tr -d ' ')" "8"
+check "installs 9 commands" "$(ls "$P/.claude/commands/laravel" | wc -l | tr -d ' ')" "9"
 check "installs 3 skills" "$(ls "$P/.claude/skills" | wc -l | tr -d ' ')" "3"
 [ -x "$P/.claude/hooks/stack.sh" ] && ok "hooks are executable after install" || bad "hooks not executable after install"
 grep -q '.claude/.cache/' "$P/.gitignore" && ok "adds .claude/.cache/ to .gitignore" || bad "did not update .gitignore"
@@ -671,6 +675,231 @@ contains "$SET" "compact" "context is re-injected after compaction"
 contains "$SET" '^(laravel-.*|blade-.*)$' "SubagentStart is scoped to kit agents"
 L1="$(CLAUDE_PROJECT_DIR="$P" bash "$H/session-context.sh" | jq -r .hookSpecificOutput.additionalContext | wc -c)"
 [ "$L1" -lt 9000 ] && ok "session context stays under the 10,000-char hook cap ($L1)" || bad "session context over the hook cap ($L1)"
+
+section "owner steps: verdict gate, review/accept, no push"
+V="$TMP/gate"; gproj "$V"
+CLAUDE_PROJECT_DIR="$V" bash "$H/tasks.sh" init >/dev/null 2>&1
+mkt() { printf -- '---\nid: %s\ntitle: %s\nstatus: %s\ndepends: %s\n---\n\n## Acceptance\n- [ ] %s\n\n## Log\n' "$1" "$2" "$3" "${5:-}" "$4" > "$V/.claude/tasks/$1-t.md"; }
+gt() { CLAUDE_PROJECT_DIR="$V" LARAVEL_WF_REQUIRE_VERDICT=on bash "$H/tasks.sh" "$@" 2>&1; }
+mkt 101 First draft "[browser] it shows"
+mkt 102 Second todo "[browser] it shows" 101
+contains "$(CLAUDECODE=1 gt approve 101)" "user's step" "approve refuses inside Claude Code"
+contains "$(gt show 101)" "status: draft" "the draft stays a draft"
+gt approve 101 >/dev/null; contains "$(gt show 101)" "status: todo" "approve works from the user's terminal"
+gt start 101 >/dev/null; echo b > "$V/b.txt"
+contains "$(gt close 101 built)" "no verdict recorded" "close refuses without a verdict"
+contains "$(gt show 101)" "status: doing" "and the task is still doing"
+gt verdict 101 FAIL 1 >/dev/null
+contains "$(gt close 101 built)" "FAIL" "close refuses after FAIL"
+gt verdict 101 SKIPPED 2 >/dev/null
+contains "$(gt close 101 built)" "can-skip-verify" "SKIPPED needs can-skip-verify's yes"
+gt verdict 101 UNVERIFIED 2 >/dev/null
+contains "$(gt close 101 'built; UNVERIFIED [browser]: it shows')" "tasks.sh accept 101" "close after UNVERIFIED says what the user does"
+contains "$(gt show 101)" "status: review" "UNVERIFIED lands in review, not done"
+contains "$(gt next)" "no runnable task" "dependents wait for the accept"
+contains "$(CLAUDECODE=1 gt accept 101)" "user's step" "accept refuses inside Claude Code"
+gt accept 101 >/dev/null; contains "$(gt show 101)" "status: done" "accept moves review to done"
+contains "$(gt show 101)" "accepted by the user" "and logs it"
+contains "$(gt next)" "102-t.md" "then the dependent runs"
+gt start 102 >/dev/null; gt verdict 102 PASS 1 >/dev/null; gt close 102 "built it" >/dev/null
+contains "$(gt show 102)" "status: done" "PASS closes to done"
+mkt 103 Third todo "[review] it reads well"
+gt start 103 >/dev/null; echo c >> "$V/composer.json"
+gt can-skip-verify 103 >/dev/null; gt verdict 103 SKIPPED 1 >/dev/null; gt close 103 tiny >/dev/null
+contains "$(gt show 103)" "status: done" "an allowed SKIPPED closes"
+mkt 104 Fourth review '[browser] x'
+contains "$(CLAUDE_PROJECT_DIR="$V" bash "$H/session-context.sh")" "awaiting the user's check" "the session report counts review tasks"
+own() { printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)" | bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?; }
+for c in 'git push' 'git push origin main' 'cd app && git -C .. push -u origin x' '"git" push' '/usr/bin/git push' 'git -c a=b push' 'gh pr create --fill' 'gh pr merge 3' \
+         'bash .claude/hooks/tasks.sh approve all' 'bash $T approve 001' 'bash ~/.claude/hooks/tasks.sh accept 001' \
+         "sed -i 's/status: draft/status: todo/' .claude/tasks/001-x.md" 'echo status: todo > .claude/tasks/001-x.md' \
+         'sudo -u x git push' 'timeout 30 git push' 'sh -c "git push"' "$(printf "bash <<'EOF'\ngit push\nEOF")" \
+         "$(printf "cat <<EOF > f\nx\nEOF\ngit push")"; do
+  check "owner guard blocks: $c" "$(own "$c")" "2"
+done
+for c in 'git status' 'git commit -m "push the fix"' 'echo push' 'gh pr view' 'git log --oneline | head' \
+         'git commit -m "run tasks.sh approve, then git push"' 'echo tasks.sh approve' \
+         "$(printf "python3 - <<'PY'\ntasks.sh accept 1\ngit push\nPY")" \
+         'bash .claude/hooks/tasks.sh close 001 "approve flow"' 'grep -n status: .claude/tasks/001-x.md' \
+         "$(printf "bash .claude/hooks/tasks.sh new 005-x <<'TASK'\n---\nstatus: draft\n---\nsee .claude/tasks/ > x\nTASK")"; do
+  check "owner guard allows: ${c%%$'\n'*}" "$(own "$c")" "0"
+done
+check "LARAVEL_WF_ALLOW_PUSH=1 still sends plain git push through git-sync" "$(LARAVEL_WF_ALLOW_PUSH=1 own 'git push')" "2"
+check "LARAVEL_WF_ALLOW_PUSH=1 allows git-sync.sh push" "$(LARAVEL_WF_ALLOW_PUSH=1 own 'bash .claude/hooks/git-sync.sh push')" "0"
+contains "$(cat "$KIT/.claude/settings.json")" "guard-owner.sh" "the owner guard is registered before Bash runs"
+contains "$(cat "$KIT/install.sh")" "guard-owner" "the installer knows the owner guard"
+
+section "plugin packaging (2.4)"
+PJ="$KIT/.claude-plugin/plugin.json"; MJ="$KIT/.claude-plugin/marketplace.json"
+jq -e . "$PJ" >/dev/null 2>&1 && ok "plugin.json is valid JSON" || bad "plugin.json is valid JSON"
+jq -e . "$MJ" >/dev/null 2>&1 && ok "marketplace.json is valid JSON" || bad "marketplace.json is valid JSON"
+check "plugin version matches VERSION" "$(jq -r .version "$PJ")" "$(cat "$KIT/VERSION")"
+check "plugin is named laravel (commands stay /laravel:*)" "$(jq -r .name "$PJ")" "laravel"
+check "marketplace lists the same plugin" "$(jq -r '.plugins[0].name' "$MJ")" "laravel"
+check "plugin.json lists every agent" "$(jq -r '.agents[]' "$PJ" | sed 's|^\./||' | sort | tr '\n' ' ')" "$(cd "$KIT" && ls .claude/agents/*.md | sort | tr '\n' ' ')"
+for f in $(jq -r '.agents[], .commands, .skills' "$PJ"); do [ -e "$KIT/$f" ] && ok "plugin path exists: $f" || bad "plugin path exists: $f"; done
+check "hooks.json is up to date with settings.json (jq -f hooks/build-hooks.jq)" \
+  "$(jq -f "$KIT/hooks/build-hooks.jq" "$KIT/.claude/settings.json" | jq -S .)" "$(jq -S . "$KIT/hooks/hooks.json")"
+for n in $(jq -r '.. | .command? // empty' "$KIT/hooks/hooks.json" | awk '{print $NF}'); do
+  [ -x "$KIT/.claude/hooks/$n.sh" ] && ok "plugin hook exists: $n" || bad "plugin hook exists: $n"
+done
+check "plugin SubagentStart matches scoped agent names" "$(jq -r '.hooks.SubagentStart[0].matcher' "$KIT/hooks/hooks.json")" "(^|:)(laravel|blade)-"
+for a in laravel-verifier laravel:laravel-verifier laravel:blade-ui-builder; do
+  [[ "$a" =~ $(jq -r '.hooks.SubagentStart[0].matcher' "$KIT/hooks/hooks.json") ]] && ok "subagent matcher takes $a" || bad "subagent matcher takes $a"
+done
+[[ "general-purpose" =~ $(jq -r '.hooks.SubagentStart[0].matcher' "$KIT/hooks/hooks.json") ]] && bad "subagent matcher skips other agents" || ok "subagent matcher skips other agents"
+
+PL="$TMP/plugin-proj"; cp -R "$P" "$PL"; rm -rf "$PL/.claude"; mkdir -p "$PL/.claude"
+pd() { CLAUDE_PLUGIN_ROOT="$KIT" CLAUDE_PROJECT_DIR="$PL" bash "$H/plugin-dispatch.sh" "$@"; }
+contains "$(pd session-context </dev/null)" "Kit helpers: \`$H\`" "plugin session report names the plugin's helper folder"
+contains "$(pd session-context </dev/null)" "laravel-workflow $(cat "$KIT/VERSION")" "plugin session report reads the kit VERSION"
+check "dispatcher refuses odd hook names" "$(pd '../x' </dev/null; echo $?)" "0"
+mkdir -p "$PL/.claude/hooks"; cp "$H/session-context.sh" "$PL/.claude/hooks/"
+lacks "$(pd session-context </dev/null)" "installed twice" "a stray project file alone doesn't make the plugin step aside"
+printf '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"$CLAUDE_PROJECT_DIR/.claude/hooks/session-context.sh"}]}]}}' > "$PL/.claude/settings.json"
+contains "$(pd session-context </dev/null)" "installed twice" "with a registered project install, the plugin steps aside and says so"
+printf '#!/bin/sh\nexit 0\n' > "$PL/.claude/hooks/guard-read.sh"
+printf '{"hooks":{"PreToolUse":[{"matcher":"Read","hooks":[{"type":"command","command":"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-read.sh"}]}]}}' > "$PL/.claude/settings.local.json"
+check "a project file can't switch a plugin guard off" "$(printf '{"tool_input":{"file_path":"%s/.env"}}' "$PL" | pd guard-read >/dev/null 2>&1; echo $?)" "2"
+rm -rf "$PL/.claude/hooks" "$PL/.claude/settings.json" "$PL/.claude/settings.local.json"
+check "without a project install the plugin's guard blocks" "$(printf '{"tool_input":{"file_path":"%s/.env"}}' "$PL" | pd guard-read >/dev/null 2>&1; echo $?)" "2"
+
+rd() { printf '{"tool_input":{"file_path":"%s"}}' "$1" | CLAUDE_PROJECT_DIR="$PL" bash "$H/guard-read.sh" >/dev/null 2>&1; echo $?; }
+for f in "$PL/.env" "$PL/.env.testing" "$PL/.env.production" "$PL/auth.json" "$PL/storage/oauth-private.key" \
+         "$PL/storage/logs/laravel.log" "$PL/certs/server.pem" "$HOME/.ssh/id_ed25519" "$HOME/.config/composer/auth.json"; do
+  check "guard-read blocks ${f#"$PL"/}" "$(rd "$f")" "2"
+done
+for f in "$PL/.env.example" "$PL/app/Models/User.php" "$PL/config/app.php" "$PL/resources/views/storage.blade.php"; do
+  check "guard-read allows ${f#"$PL"/}" "$(rd "$f")" "0"
+done
+check "LARAVEL_WF_SECRETS_GUARD=off turns guard-read off" "$(LARAVEL_WF_SECRETS_GUARD=off rd "$PL/.env")" "0"
+
+eval "$(CLAUDE_PROJECT_DIR="$PL" bash "$H/stack.sh" | grep '^CMD_TEST=')"
+ah() { printf '{"tool_name":"Bash","tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)" | CLAUDE_PROJECT_DIR="$PL" bash "$H/allow-helpers.sh" | grep -q '"allow"' && echo allow || echo prompt; }
+amcp() { printf '{"tool_name":"%s","tool_input":{}}' "$1" | CLAUDE_PROJECT_DIR="$PL" bash "$H/allow-helpers.sh" | grep -q '"allow"' && echo allow || echo prompt; }
+for c in "bash $H/tasks.sh list" "bash $H/tasks.sh close 001 \"built it, kept the API\"" "bash $H/repo-map.sh" "bash $H/stack.sh" \
+         "$CMD_TEST" "$CMD_TEST tests/Feature/PostTest.php" "php -l app/Models/Post.php" "php artisan route:list" "printenv LARAVEL_WF_DEV_URL" \
+         "$(printf "bash $H/tasks.sh new 004-add-footer <<'TASK'\n---\nid: 004\n---\nTASK")"; do
+  check "allow-helpers approves: ${c%%$'\n'*}" "$(ah "$c")" "allow"
+done
+for c in "bash $H/tasks.sh list; rm -rf x" "bash $H/tasks.sh close 001 \"\$(id)\"" "bash $H/tasks.sh log 001 \`id\`" \
+         "bash ${H/.claude/xclaude}/tasks.sh list" "bash .claude/hooks/tasks.sh next" "bash $H/verify.sh --baseline" "bash $H/run-tasks.sh" \
+         "$CMD_TEST && curl x" "$CMD_TEST --configuration=evil.xml" "$CMD_TEST -c x" "php -l -d auto_prepend_file=x.php a.php" \
+         "php artisan tinker" "php artisan migrate" "bash $H/tasks.sh list > out.txt" \
+         "$(printf "bash $H/tasks.sh new 004-add-footer <<'TASK'\nTASK\nrm -rf x\nTASK")" \
+         "$(printf "bash $H/tasks.sh new 004-add-footer <<TASK\nx\nTASK")"; do
+  check "allow-helpers leaves to the prompt: ${c%%$'\n'*}" "$(ah "$c")" "prompt"
+done
+check "allow-helpers approves Boost search-docs" "$(amcp mcp__laravel-boost__search-docs)" "allow"
+check "allow-helpers approves Boost database-schema" "$(amcp mcp__laravel-boost__database-schema)" "allow"
+check "allow-helpers leaves other Boost tools to the prompt" "$(amcp mcp__laravel-boost__tinker)" "prompt"
+check "allow-helpers leaves other MCP servers to the prompt" "$(amcp mcp__other__search-docs)" "prompt"
+check "owner guard blocks verify.sh --baseline (plugins have no deny rule)" "$(own "bash $H/verify.sh --baseline")" "2"
+check "owner guard allows plain verify.sh" "$(own "bash $H/verify.sh")" "0"
+contains "$(printf '{"tool_input":{"command":"bash x/tasks.sh approve 001"}}' | CLAUDE_PROJECT_DIR="$PL" bash "$H/guard-owner.sh" 2>&1)" "bash $H/tasks.sh approve" "owner guard names the helper folder actually in use"
+
+DRAFT="$(printf "bash $KIT/.claude/hooks/tasks.sh new 004-x <<'TASK'\n---\nid: 004\n---\nRead config, never .env\nTASK")"
+check "guard-secrets: plugin tasks.sh new heredoc passes" "$(CLAUDE_PLUGIN_ROOT="$KIT" sec "$DRAFT")" "0"
+check "guard-secrets: the same heredoc outside a plugin is still checked" "$(sec "$DRAFT")" "2"
+O="$(printf '{"tool_input":{"command":"cat .e*"}}' | (cd "$KIT" && CLAUDE_PROJECT_DIR="$KIT" bash "$H/guard-secrets.sh") 2>&1)"
+contains "$O" "(.e*)" "secrets message shows the pattern"
+lacks "$O" "CHANGELOG.md" "and doesn't glob-expand it into the folder's files"
+lacks "$(cat "$KIT"/.claude/agents/*.md "$KIT"/.claude/commands/laravel/*.md)" "bash .claude/hooks/" "prompts don't hard-code the project helper path"
+contains "$(cat "$KIT/install.sh")" "plugin-dispatch" "the uninstaller removes the plugin-only hooks"
+
+section "no comments: pure code (2.4)"
+CG="$TMP/comments"; mkdir -p "$CG/app" "$CG/resources/views"
+gc() { jq -n --arg f "$1" --arg o "$2" --arg n "$3" '{tool_name:"Edit",tool_input:{file_path:$f,old_string:$o,new_string:$n}}' | CLAUDE_PROJECT_DIR="$CG" bash "$H/guard-comments.sh" >/dev/null 2>&1; echo $?; }
+check "blocks a PHP line comment" "$(gc "$CG/app/A.php" x "// load users${NL}\$u = User::all();")" "2"
+check "blocks a trailing PHP comment" "$(gc "$CG/app/A.php" x "\$u = User::all(); // all of them")" "2"
+check "blocks a # comment" "$(gc "$CG/app/A.php" x "# note${NL}\$a = 1;")" "2"
+check "blocks a prose docblock" "$(gc "$CG/app/A.php" x "/**${NL} * Get the posts.${NL} */")" "2"
+check "blocks a Blade comment" "$(gc "$CG/resources/views/a.blade.php" x "{{-- header --}}${NL}<h1>Hi</h1>")" "2"
+check "blocks an HTML comment in Blade" "$(gc "$CG/resources/views/a.blade.php" x "<!-- nav -->")" "2"
+check "blocks a JS comment" "$(gc "$CG/resources/js/app.js" x "const a = foo(); // why")" "2"
+check "blocks a CSS comment" "$(gc "$CG/resources/css/app.css" x "/* brand */${NL}a { color: red; }")" "2"
+check "allows a PHP attribute" "$(gc "$CG/app/A.php" x "#[Override]${NL}public function x(): void {}")" "0"
+check "allows type-only docblock tags" "$(gc "$CG/app/A.php" x "/**${NL} * @param array<int, string> \$ids${NL} * @return HasMany<Post, \$this>${NL} */")" "0"
+check "allows @phpstan-ignore" "$(gc "$CG/app/A.php" x "\$a = foo(); // @phpstan-ignore-line")" "0"
+check "allows a URL in a string" "$(gc "$CG/app/A.php" x "\$u = 'https://example.com';")" "0"
+check "allows a CSS universal selector" "$(gc "$CG/resources/css/app.css" x "* { box-sizing: border-box; }")" "0"
+check "ignores markdown" "$(gc "$CG/README.md" x "<!-- hi -->")" "0"
+check "ignores vendor/" "$(gc "$CG/vendor/x/A.php" x "// hi")" "0"
+printf '<?php\n// existing note\n$a = 1;\n' > "$CG/app/B.php"
+check "comments already in the file are kept" "$(gc "$CG/app/B.php" '$a = 1;' "// existing note${NL}\$a = 2;")" "0"
+check "LARAVEL_WF_COMMENT_GUARD=off turns it off" "$(LARAVEL_WF_COMMENT_GUARD=off gc "$CG/app/A.php" x "// hi")" "0"
+printf '<?php\nclass C {}\n' > "$CG/app/C.php"
+O="$(jq -n --arg f "$CG/app/C.php" --arg c "<?php${NL}// make it${NL}class C {}" '{tool_name:"Write",tool_input:{file_path:$f,content:$c}}' | CLAUDE_PROJECT_DIR="$CG" bash "$H/guard-comments.sh" 2>&1)"
+contains "$O" "// make it" "a Write that adds a comment is blocked and names the line"
+contains "$(cat "$KIT/.claude/settings.json")" "guard-comments.sh" "the comment guard runs before Edit/Write"
+for f in laravel-route-builder laravel-data-layer blade-ui-builder laravel-test-writer; do
+  contains "$(cat "$KIT/.claude/agents/$f.md")" "No comments — pure code" "$f is told: no comments"
+done
+contains "$(cat "$KIT/.claude/commands/laravel/task.md")" "No comments — pure code" "the task runner is told: no comments"
+contains "$(cat "$KIT/.claude/skills/php-conventions/SKILL.md")" "carries no comments" "php-conventions states the rule"
+contains "$(CLAUDE_PROJECT_DIR="$P" bash "$H/session-context.sh")" "carries no comments" "the session report states the rule"
+
+section "git: commit, pull the stage branch, push (2.4)"
+GS="$TMP/gitsync"; mkdir -p "$GS"
+git init -q --bare "$GS/remote.git"
+git clone -q "$GS/remote.git" "$GS/app" 2>/dev/null
+gcfg() { git -C "$1" config user.email t@t; git -C "$1" config user.name t; git -C "$1" config commit.gpgsign false; }
+gcfg "$GS/app"
+( cd "$GS/app" && git checkout -q -b main && printf 'a\n' > a.txt && git add a.txt && git commit -qm init && git push -q origin main \
+  && git checkout -q -b stage && git push -q origin stage && git checkout -q -b feature && printf 'f\n' > f.txt && git add f.txt && git commit -qm feature ) 2>/dev/null
+git clone -q "$GS/remote.git" "$GS/mate" 2>/dev/null; gcfg "$GS/mate"
+( cd "$GS/mate" && git checkout -q stage && printf 's\n' > s.txt && git add s.txt && git commit -qm "stage work" && git push -q origin stage ) 2>/dev/null
+gsync() { (cd "$GS/app" && CLAUDE_PROJECT_DIR="$GS/app" bash "$H/git-sync.sh" "$@" 2>&1); }
+gsync_rc() { (cd "$GS/app" && CLAUDE_PROJECT_DIR="$GS/app" bash "$H/git-sync.sh" "$@" >/dev/null 2>&1); echo $?; }
+check "no stage branch configured: exit 2" "$(gsync_rc push)" "2"
+contains "$(gsync stage)" "likely candidates on origin: stage" "it suggests the stage branch from the remote"
+contains "$(gsync stage stage)" "stage branch: stage" "stage <branch> records it"
+contains "$(cat "$GS/app/.claude/workflow.conf")" "STAGE_BRANCH=stage" "the choice lives in .claude/workflow.conf"
+check "LARAVEL_WF_STAGE_BRANCH overrides the file" "$(cd "$GS/app" && LARAVEL_WF_STAGE_BRANCH=main CLAUDE_PROJECT_DIR="$GS/app" bash "$H/git-sync.sh" stage)" "main"
+check "an invalid branch name is refused" "$(gsync_rc stage 'bad..name')" "1"
+( cd "$GS/app" && git add .claude/workflow.conf && git commit -qm conf )
+check "push refuses a branch missing the stage branch's commits" "$(gsync_rc push)" "5"
+contains "$(gsync sync)" "brought in" "sync merges the stage branch in"
+[ -f "$GS/app/s.txt" ] && ok "the stage branch's file arrived" || bad "the stage branch's file arrived"
+check "after sync, push succeeds" "$(gsync_rc push)" "0"
+git -C "$GS/remote.git" rev-parse --verify --quiet refs/heads/feature >/dev/null && ok "the branch is on the remote" || bad "the branch is on the remote"
+printf 'dirty\n' > "$GS/app/dirty.txt"
+check "sync refuses uncommitted changes" "$(gsync_rc sync)" "4"
+check "push refuses uncommitted changes" "$(gsync_rc push)" "4"
+rm -f "$GS/app/dirty.txt"
+( cd "$GS/mate" && git pull -q origin stage && printf 'mate\n' > a.txt && git commit -qam "mate edit" && git push -q origin stage ) 2>/dev/null
+( cd "$GS/app" && printf 'mine\n' > a.txt && git commit -qam "my edit" )
+check "a conflicting stage change: exit 3" "$(gsync_rc sync)" "3"
+contains "$(cd "$GS/app" && git diff --name-only --diff-filter=U)" "a.txt" "the conflict is left for resolving"
+check "sync refuses while a merge is in progress" "$(gsync_rc sync)" "6"
+( cd "$GS/app" && git merge --abort )
+printf 'K=1\n' > "$GS/app/.env"; ( cd "$GS/app" && git add -f .env )
+check "check-staged refuses a staged .env" "$(gsync_rc check-staged)" "1"
+( cd "$GS/app" && git restore --staged .env && rm .env )
+check "check-staged passes without secrets" "$(gsync_rc check-staged)" "0"
+contains "$(gsync status)" "stage: origin/stage" "status names the stage branch"
+
+pc() { printf '{"prompt":%s}' "$(printf '%s' "$1" | jq -Rs .)" | CLAUDE_PROJECT_DIR="$GS/app" bash "$H/push-consent.sh"; [ -f "$GS/app/.claude/.cache/push-consent" ] && echo yes || echo no; rm -f "$GS/app/.claude/.cache/push-consent"; }
+check "/laravel:sync records the user's consent" "$(pc '/laravel:sync fix login')" "yes"
+check "a plain request doesn't" "$(pc 'please push it')" "no"
+check "a later mention doesn't" "$(pc 'then run /laravel:sync')" "no"
+check "a different /sync command doesn't" "$(pc '/sync')" "no"
+ownp() { printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)" | CLAUDE_PROJECT_DIR="$GS/app" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?; }
+check "git-sync.sh push without consent is blocked" "$(ownp "bash $H/git-sync.sh push")" "2"
+mkdir -p "$GS/app/.claude/.cache"; date +%s > "$GS/app/.claude/.cache/push-consent"
+check "with fresh consent it runs" "$(ownp "bash $H/git-sync.sh push")" "0"
+check "a variable holding the helper counts too" "$(ownp 'G=x; bash $G push')" "0"
+check "plain git push stays blocked even with consent" "$(ownp 'git push origin feature')" "2"
+echo $(( $(date +%s) - 4000 )) > "$GS/app/.claude/.cache/push-consent"
+check "stale consent (over 30 min) is blocked" "$(ownp "bash $H/git-sync.sh push")" "2"
+check "Claude can't write the consent itself" "$(ownp 'date +%s > .claude/.cache/push-consent')" "2"
+check "sync and status need no consent" "$(ownp "bash $H/git-sync.sh sync")$(ownp "bash $H/git-sync.sh status")" "00"
+contains "$(cat "$KIT/.claude/commands/laravel/sync.md")" "disable-model-invocation: true" "/laravel:sync runs only when the user types it"
+contains "$(jq -r '.hooks.UserPromptSubmit[0].hooks[0].command' "$KIT/.claude/settings.json")" "push-consent.sh" "the consent hook is registered"
+IG="$TMP/install-stage"; lproj "$IG"; git init -q "$IG"
+bash "$KIT/install.sh" "$IG" --stage-branch develop >/dev/null 2>&1
+contains "$(cat "$IG/.claude/workflow.conf" 2>/dev/null)" "STAGE_BRANCH=develop" "install.sh --stage-branch records the stage branch"
+contains "$(CLAUDE_PROJECT_DIR="$IG" bash "$H/session-context.sh")" "stage branch \`develop\`" "the session report names the stage branch"
 
 # ---------------------------------------------------------------- summary -----
 printf '\n%s\n' "-----------------------------------------"

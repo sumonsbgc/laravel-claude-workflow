@@ -1,0 +1,14 @@
+{
+	"name": "laravel-workflow",
+	"owner": {
+		"name": "Mohammad Sumon"
+	},
+	"description": "The laravel-workflow kit as a Claude Code plugin.",
+	"plugins": [
+		{
+			"name": "laravel",
+			"source": "./",
+			"description": "Laravel + Blade workflow: task runner, verifier, guards, project memory."
+		}
+	]
+}

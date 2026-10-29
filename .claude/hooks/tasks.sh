@@ -15,9 +15,11 @@
 #   tasks.sh map                  the cached repo map (routes, modules, models…), see repo-map.sh
 #   tasks.sh path <id>            print its path
 #   tasks.sh approve <id|all>     draft -> todo (the planner writes drafts; you approve them)
+#   tasks.sh accept <id>          review -> done, after you checked what the verifier couldn't
 #   tasks.sh start <id>           -> doing; records the git base so the task's diff can be shown
 #   tasks.sh diff <id>            everything this task changed since it started (needs git)
-#   tasks.sh close <id> <text>    -> done + log line; with LARAVEL_WF_CHECKPOINT=commit, one local commit
+#   tasks.sh close <id> <text>    -> done (review if the last verdict was UNVERIFIED) + log line;
+#                                 refuses until a verdict is recorded; with LARAVEL_WF_CHECKPOINT=commit, one local commit
 #                                 holding only this task's files (never secrets, never pre-existing edits)
 #   tasks.sh block <id> <reason>  -> blocked, reason logged
 #   tasks.sh undo <id> [--cascade]  revert the task's checkpoint; refuses while done tasks depend on it
@@ -28,7 +30,9 @@
 #   tasks.sh count [status]       number of tasks, for cheap status checks
 #   tasks.sh stats                cost/time/guard summary from .claude/.cache/metrics.jsonl
 #
-# Statuses: draft -> todo -> doing -> done | blocked.
+# Statuses: draft -> todo -> doing -> done | review | blocked.
+#   draft and review are the user's to move on (approve, accept): both refuse to run inside a
+#   Claude Code session (CLAUDECODE=1), so the user runs them in their own terminal.
 # A task is a .md file whose FIRST LINE is `---` (YAML frontmatter). Plans, notes and scratch
 # files that happen to live in the tasks folder are ignored, not run.
 # Tasks live in .claude/tasks (override with LARAVEL_WF_TASKS_DIR, relative to the project).
@@ -108,6 +112,16 @@ in_git() { git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; }
 
 state_get() { # state_get <id> <key>
   [ -f "$STATE/$1.env" ] && sed -n "s/^$2=//p" "$STATE/$1.env" | head -1
+}
+state_set() { # state_set <id> <key> <value>
+  mkdir -p "$STATE"
+  { [ -f "$STATE/$1.env" ] && grep -v "^$2=" "$STATE/$1.env"; printf '%s=%s\n' "$2" "$3"; } > "$STATE/$1.env.tmp"
+  mv "$STATE/$1.env.tmp" "$STATE/$1.env"
+}
+# approve and accept are the user's decisions; Claude Code sets CLAUDECODE=1 in its Bash tool.
+users_step() {
+  [ "${CLAUDECODE:-}" = 1 ] && die "tasks.sh $1 is the user's step — run it in your own terminal, not through Claude"
+  return 0
 }
 
 # Paths that must never be committed by a checkpoint, whatever .gitignore says.
@@ -191,7 +205,7 @@ case "$CMD" in
     BODY="$(head -c 200000)"
     [ "$(printf '%s\n' "$BODY" | head -n1 | tr -d '[:space:]')" = "---" ] || die "the task must start with a --- frontmatter line"
     FM="$(printf '%s\n' "$BODY" | sed -n '2,/^---[[:space:]]*$/p')"
-    printf '%s\n' "$FM" | grep -qE "^id:[[:space:]]*['\"]?$NID['\"]?[[:space:]]*$" || die "frontmatter id must be $NID"
+    printf '%s\n' "$FM" | grep -qE "^id:[[:space:]]*['\"]?${NID}['\"]?[[:space:]]*$" || die "frontmatter id must be $NID"
     printf '%s\n' "$FM" | grep -qE '^status:[[:space:]]*draft[[:space:]]*$' || die "new tasks are drafts: set status: draft"
     mkdir -p "$DIR" || die "cannot create $TASKS_REL"
     OUT="$DIR/$NAME.md"
@@ -280,6 +294,7 @@ case "$CMD" in
 
   approve)
     [ $# -ge 1 ] || die "usage: tasks.sh approve <id|all>"
+    users_step approve
     if [ "$1" = all ]; then
       N=0
       for f in "$DIR"/*.md; do
@@ -292,6 +307,14 @@ case "$CMD" in
       [ "$(task_status "$f")" = draft ] || die "task $1 is $(task_status "$f"), not draft"
       set_status "$f" todo; echo "approved $1"
     fi ;;
+
+  accept)
+    [ $# -ge 1 ] || die "usage: tasks.sh accept <id>"
+    users_step accept
+    f="$(find_task "$1")" || die "no task with id $1"
+    [ "$(task_status "$f")" = review ] || die "task $1 is $(task_status "$f"), not review"
+    set_status "$f" "done"; append_log "$f" "accepted by the user"
+    wf_metric task_accept id "$1"; echo "accepted $1" ;;
 
   start)
     f="$(find_task "${1:?id}")" || die "no task with id $1"
@@ -347,11 +370,23 @@ case "$CMD" in
       PATHS="$(task_paths "$ID")"
       FILES="$(printf '%s' "$PATHS" | grep -c . || true)"
     fi
-    set_status "$f" "done"; append_log "$f" "$*"
+    # Closing needs an independent verdict: the verifier's, or a SKIPPED that can-skip-verify allowed.
+    VERDICT="$(state_get "$ID" verdict)"
+    if [ "${LARAVEL_WF_REQUIRE_VERDICT:-on}" != off ]; then
+      case "$VERDICT" in
+        PASS|UNVERIFIED) ;;
+        SKIPPED) [ "$(state_get "$ID" skip_ok)" = 1 ] || die "task $ID: SKIPPED is only valid after can-skip-verify said yes — run the verifier" ;;
+        FAIL) die "task $ID: the last verdict is FAIL — fix what it listed and verify again, or block the task" ;;
+        *) die "task $ID: no verdict recorded — verify it first (can-skip-verify, else laravel-verifier), then: tasks.sh verdict $ID <result>" ;;
+      esac
+    fi
+    END="done"; [ "$VERDICT" = UNVERIFIED ] && END=review
+    set_status "$f" "$END"; append_log "$f" "$*"
     # Remember what this task touched, so dependent tasks get it from `context` instead of re-reading.
     [ -n "$PATHS" ] && printf '%s\n' "$PATHS" > "$STATE/$ID.files"
     wf_metric task_close id "$ID" size "$(task_size "$f")" seconds "$SECS" files "$FILES"
     echo "closed $ID (${SECS}s, $FILES files)"
+    [ "$END" = review ] && echo "status: review — some criteria could not be checked. The user checks them, then runs in their own terminal: tasks.sh accept $ID (dependent tasks wait until then)"
     if [ "${LARAVEL_WF_CHECKPOINT:-off}" = commit ] && in_git; then
       SECRETS=""; ADD=()
       while IFS= read -r p; do
@@ -401,6 +436,7 @@ case "$CMD" in
   verdict)
     f="$(find_task "${1:?id}")" || die "no task with id $1"
     case "${2:-}" in PASS|FAIL|UNVERIFIED|SKIPPED) ;; *) die "usage: tasks.sh verdict <id> PASS|FAIL|UNVERIFIED|SKIPPED [round]" ;; esac
+    state_set "$1" verdict "$2"
     wf_metric verdict id "$1" result "$2" round "${3:-1}"
     echo "verdict $1: $2 (round ${3:-1})" ;;
 
@@ -416,6 +452,7 @@ case "$CMD" in
     NEW="$(git -C "$ROOT" ls-files --others --exclude-standard -- . ":!$TASKS_REL" ':!.claude' | while IFS= read -r p; do wc -l < "$ROOT/$p"; done | awk '{a+=$1} END{print a+0}')"
     T=$((LINES + NEW))
     [ "$T" -le 20 ] || { echo "no: diff is $T lines (> 20)"; exit 1; }
+    state_set "$1" skip_ok 1
     echo "yes: all criteria [review], diff $T lines" ;;
 
   block) f="$(find_task "${1:?id}")" || die "no task with id $1"; set_status "$f" blocked
@@ -463,5 +500,5 @@ if (g.length) {
 JS
     ;;
 
-  *) sed -n '2,31p' "$0"; exit 1 ;;
+  *) sed -n '2,36p' "$0"; exit 1 ;;
 esac

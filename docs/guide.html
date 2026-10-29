@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>laravel-workflow Guide</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+:root { --ink:#1f2937; --muted:#5b6472; --blue:#1565c0; --line:#d7dce3; --head:#eef4fd; --code:#0f172a; }
+* { box-sizing: border-box; }
+body { font-family: "Liberation Sans", Arial, Helvetica, sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.5; margin: 0; background: #fff; }
+h1 { font-size: 26pt; margin: 28pt 0 6pt; color: #111827; letter-spacing: -0.3pt; }
+.sub { color: var(--muted); font-size: 12pt; margin: 0 0 14pt; max-width: 85%; }
+.toc { border-top: 1px solid var(--line); padding-top: 8pt; columns: 2; column-gap: 24pt; font-size: 8.5pt; margin-bottom: 18pt; }
+.toc div { padding: 2.5pt 0; }
+h2 { color: var(--blue); font-size: 15pt; margin: 22pt 0 10pt; padding-bottom: 6pt; border-bottom: 1.5px solid #374151; break-after: avoid; }
+h3 { font-size: 11pt; margin: 14pt 0 6pt; break-after: avoid; }
+p { margin: 0 0 8pt; }
+ul { margin: 0 0 10pt; padding-left: 16pt; }
+li { margin: 3pt 0; }
+code { font-family: "DejaVu Sans Mono", "Liberation Mono", monospace; font-size: 7.8pt; background: #eef0f3; border-radius: 3px; padding: 1pt 4pt; }
+pre { background: var(--code); color: #e5e7eb; border-radius: 5px; padding: 9pt 11pt; font-family: "DejaVu Sans Mono", "Liberation Mono", monospace; font-size: 7.6pt; line-height: 1.6; margin: 6pt 0 8pt; white-space: pre-wrap; break-inside: avoid; }
+pre .c { color: #8b95a5; }
+table { width: 100%; border-collapse: collapse; margin: 6pt 0 12pt; font-size: 8.4pt; break-inside: auto; }
+th { background: var(--head); text-align: left; font-weight: bold; padding: 7pt 8pt; }
+td { padding: 6pt 8pt; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr { break-inside: avoid; }
+thead { display: table-header-group; break-after: avoid; }
+td:first-child { white-space: nowrap; }
+td.wrap { white-space: normal; }
+.new { color: #15803d; font-size: 7pt; font-weight: bold; white-space: nowrap; }
+.step { display: grid; grid-template-columns: 22pt 1fr; column-gap: 10pt; margin: 12pt 0; break-inside: avoid; }
+.dot { width: 18pt; height: 18pt; border-radius: 50%; background: var(--blue); color: #fff; font-weight: bold; font-size: 8pt; display: flex; align-items: center; justify-content: center; }
+.step h4 { margin: 2pt 0 6pt; font-size: 10pt; }
+.note { border-left: 3px solid var(--blue); background: #eef4fd; padding: 8pt 11pt; margin: 10pt 0; break-inside: avoid; }
+.warn { border-left: 3px solid #b7791f; background: #fdf6e3; padding: 8pt 11pt; margin: 10pt 0; break-inside: avoid; }
+.ok { border-left: 3px solid #2f855a; background: #eef7f0; padding: 8pt 11pt; margin: 10pt 0; break-inside: avoid; }
+.note b, .warn b, .ok b { display: block; margin-bottom: 3pt; }
+.flow { text-align: center; font-weight: bold; margin: 8pt 0 4pt; }
+.flow span { color: var(--muted); font-weight: normal; padding: 0 6pt; }
+.pb { break-before: page; }
+table.set td:first-child { white-space: normal; width: 34%; }
+table.set td:nth-child(2) { width: 26%; }
+</style>
+</head>
+<body>
+
+<h1>laravel-workflow 2.4</h1>
+<p class="sub">A step-by-step guide to adding this Claude Code workflow to your Laravel app, and what it does once it's in.</p>
+<div class="toc">
+<div>1. What is laravel-workflow?</div>
+<div>2. What you need first</div>
+<div>3. Installing it: plugin or project files</div>
+<div>4. Laravel Boost (recommended)</div>
+<div>5. Your first task: plan, approve, build</div>
+<div>6. How a task is checked</div>
+<div>7. Running many tasks safely</div>
+<div>8. Git: one command to commit, pull, push</div>
+<div>9. All commands and helpers</div>
+<div>10. The specialist agents</div>
+<div>11. Automatic checks (hooks)</div>
+<div>12. Post and Page content: Gutenberg</div>
+<div>13. Redis, uploads, S3 and CDN</div>
+<div>14. Settings you can change</div>
+<div>15. A typical day</div>
+<div>16. Problems and fixes</div>
+<div>17. What's new in 2.4 and 2.3</div>
+<div>18. Measuring the workflow</div>
+</div>
+
+<h2>1. What is laravel-workflow?</h2>
+<p>laravel-workflow is a <b>kit for Claude Code</b>, not a Composer package. Nothing is added to your app's code. It adds instructions and checks to Claude Code, as a plugin or as files in your project's <code>.claude/</code> folder, and they change how Claude Code works on your Laravel project.</p>
+<ul>
+<li><b>It plans before it builds.</b> Opus turns your request into small draft task files with clear "done" checks. You read and approve them.</li>
+<li><b>Sonnet builds each task</b>, directly for small tasks and with specialist agents for large ones.</li>
+<li><b>A second agent checks the work.</b> It sees only the task and the changes, never the builder's reasoning. A task can't be closed without its verdict.</li>
+<li><b>Automatic checks</b> catch the mistakes that only show up in production: <code>env()</code> outside config, mass assignment, raw SQL, a missing <code>@csrf</code>, N+1 queries, and more.</li>
+<li><b>It knows Laravel 13</b> (rules checked against laravel.com), and it uses Laravel Boost when you have it.</li>
+<li><b>Post and Page modules</b> always use the Gutenberg block editor, never CKEditor.</li>
+<li><b>Pure code.</b> Nothing written for a task carries a comment; intent goes into names, types and small methods. A check blocks any edit that adds one.</li>
+<li><b>The decisions stay yours.</b> Claude can't approve its own drafts, accept work nobody could check, or push.</li>
+<li><b>It's safe to undo.</b> You can get one commit per task and roll back any single task.</li>
+</ul>
+<div class="note"><b>In one sentence</b>Describe what you want with <code>/laravel:write-task</code>, approve the plan, run <code>/laravel:task</code>, and every task is built, independently checked and recorded.</div>
+
+<h2>2. What you need first</h2>
+<table>
+<thead><tr><th>Requirement</th><th>Why</th></tr></thead>
+<tr><td>A Laravel 11, 12 or 13 app</td><td>It needs <code>artisan</code> and <code>laravel/framework</code> in <code>composer.json</code>. The kit detects the version.</td></tr>
+<tr><td>Claude Code</td><td>The workflow runs inside it (terminal, desktop app or IDE).</td></tr>
+<tr><td>bash, PHP</td><td>The checks are shell scripts (Linux, macOS, or WSL on Windows).</td></tr>
+<tr><td><code>jq</code></td><td>Needed for safe settings merging and batch runs.</td></tr>
+<tr><td>git (recommended)</td><td>Enables task diffs, the verifier's view of changes, per-task commits and undo.</td></tr>
+<tr><td>Pint, Pest/PHPUnit, PHPStan (optional)</td><td>Used if present; nothing is installed for you.</td></tr>
+<tr><td>Playwright (optional)</td><td>Lets the verifier check <code>[browser]</code> criteria in a real browser.</td></tr>
+</table>
+
+<h2 class="pb">3. Installing it: plugin or project files</h2>
+<p>There are two ways. Pick <b>one</b> per project. If both are present, the plugin says so at session start and the project files win.</p>
+<table>
+<thead><tr><th></th><th>A. Plugin <span class="new">new in 2.4</span></th><th>B. Project files</th></tr></thead>
+<tr><td>Where it lives</td><td class="wrap">Once, in Claude Code. Nothing is copied into the project.</td><td class="wrap">Copied into <code>your-app/.claude/</code>, so it can be committed for the team.</td></tr>
+<tr><td>Updating</td><td class="wrap"><code>claude plugin update laravel@laravel-workflow</code></td><td class="wrap">Run <code>./install.sh</code> again.</td></tr>
+<tr><td>Helper commands</td><td class="wrap">In the plugin's folder. The session report prints the path ("Kit helpers").</td><td class="wrap"><code>bash .claude/hooks/…</code></td></tr>
+</table>
+
+<div class="step"><div class="dot">A</div><div>
+<h4>Install as a plugin</h4>
+<pre>claude plugin marketplace add ~/www/hobbies/laravel-workflow
+claude plugin install laravel@laravel-workflow</pre>
+<p>The commands are the same <code>/laravel:*</code>. A plugin can't carry permission rules, so extra checks take their place: one approves only the kit's own helpers, your test, lint and build commands, a few read-only artisan commands and Boost's read-only tools; one blocks Claude from reading <code>.env</code> files, keys, <code>auth.json</code> and <code>storage/</code>. Your own deny and ask rules always win.</p>
+</div></div>
+
+<div class="step"><div class="dot">B</div><div>
+<h4>Or copy it into your app</h4>
+<pre>cd ~/www/hobbies/laravel-workflow
+./install.sh /path/to/your-laravel-app          <span class="c"># add --dry-run to preview</span></pre>
+<p>This copies the kit into <code>your-laravel-app/.claude/</code> and merges <code>settings.json</code>. The old file is backed up, older kit entries are replaced, and permission rules that earlier versions shipped and later removed are dropped. If PHPStan is installed, it also records the findings that already exist, so Claude is held only to new ones.</p>
+</div></div>
+
+<div class="step"><div class="dot">1</div><div>
+<h4>Open Claude Code in your app, then run setup once</h4>
+<pre>cd /path/to/your-laravel-app
+claude
+/laravel:setup</pre>
+<p>At start you'll see a short report: kit version, Laravel and PHP versions, the view layer, drivers, storage, the Kit helpers path and the verify commands. That means it's working. Setup creates <code>.claude/tasks/</code>, fills <code>.claude/project-context.md</code> with facts about your repo, adds a short pointer to <code>CLAUDE.md</code>, recommends Laravel Boost if it's missing, and tells you what won't work here.</p>
+<div class="warn"><b>If setup says static analysis is already failing</b>Type <code>! bash .claude/hooks/verify.sh --baseline</code> in the prompt (plugin: the Kit helpers path from the report). That records the existing findings. Claude isn't allowed to do this itself, so it can never excuse its own mistakes.</div>
+</div></div>
+
+<div class="ok"><b>Commit</b>With project files: <code>.claude/</code> (including <code>.claude/tasks/</code>) and <code>CLAUDE.md</code>, so your team gets the same workflow. With the plugin: <code>.claude/tasks/</code>, <code>.claude/project-context.md</code> and <code>CLAUDE.md</code>. <code>.claude/.cache/</code> is git-ignored.</div>
+
+<h2>4. Laravel Boost (recommended)</h2>
+<p>Laravel Boost is Laravel's official MCP server. With it installed, the kit's agents use its read-only tools:</p>
+<table>
+<thead><tr><th>Boost tool</th><th>Used for</th></tr></thead>
+<tr><td><code>search-docs</code></td><td>Documentation for your exact package versions, checked before relying on memory</td></tr>
+<tr><td><code>database-schema</code>, <code>database-query</code></td><td>Reading the real schema and stored data (read-only) instead of guessing</td></tr>
+<tr><td><code>last-error</code>, <code>read-log-entries</code>, <code>browser-logs</code></td><td>Seeing the actual exception when something fails</td></tr>
+<tr><td><code>record-rule</code></td><td>Team-shared project rules in <code>.ai/rules</code>, used by the main session only, never by agents</td></tr>
+</table>
+<pre>composer require laravel/boost --dev
+php artisan boost:install          <span class="c"># choose Claude Code: guidelines, skills, MCP</span></pre>
+<p>Claude Code asks once to approve the project's <code>.mcp.json</code> server. The read-only Boost tools are then pre-approved (by permission rules with project files, by the plugin's check with the plugin).</p>
+
+<h2>5. Your first task: plan, approve, build</h2>
+<div class="step"><div class="dot">1</div><div>
+<h4>Describe what you want</h4>
+<pre>/laravel:write-task an admin screen where editors manage their own news and can delete one</pre>
+<p>The planner (Opus) asks questions first if something is unclear, splits big requests into small tasks, sets the order (<code>depends</code>) and size, and writes them as <b>drafts</b>. It never writes code.</p>
+</div></div>
+<div class="step"><div class="dot">2</div><div>
+<h4>Read the drafts, then approve them in your own terminal</h4>
+<pre>---
+id: 003
+title: Editors manage their own news
+status: draft
+depends: 002
+size: large
+---
+## Goal
+Editors see and delete only their own news items in the admin area.
+
+## Acceptance
+- [ ] [test]    Deleting another user's news returns 403 and deletes nothing
+- [ ] [browser] Guests are redirected to "/"
+- [ ] [review]  Authorization lives in a NewsPolicy</pre>
+<p>Each "done" check carries a tag saying how it will be proven:</p>
+<ul>
+<li><code>[test]</code>: a Pest/PHPUnit test must prove it.</li>
+<li><code>[browser]</code>: it has to be seen in the running app.</li>
+<li><code>[review]</code>: reading the code is enough.</li>
+</ul>
+<pre>bash .claude/hooks/tasks.sh approve all          <span class="c"># or: approve 003</span></pre>
+<p>Approving is your step: <code>approve</code> refuses to run inside a Claude Code session, and Claude is blocked from calling it or editing a task's <code>status:</code>.</p>
+</div></div>
+<div class="step"><div class="dot">3</div><div>
+<h4>Build it</h4>
+<pre>/laravel:task</pre>
+<p>Sonnet takes the next runnable task and works through it: builds it (directly if small, with the full phased build if large), runs the checks, gets the verifier's verdict (section 6), closes it with a log line, and saves what it learned.</p>
+</div></div>
+<div class="flow">draft <span>→ you approve →</span> todo <span>→</span> doing <span>→</span> done <span>or</span> review <span>or</span> blocked</div>
+
+<h2>6. How a task is checked</h2>
+<p>The builder can't mark its own work done. <code>tasks.sh close</code> refuses until a verdict is recorded: <span class="new">new in 2.3</span></p>
+<table>
+<thead><tr><th>Verdict</th><th>What happens</th></tr></thead>
+<tr><td>PASS</td><td class="wrap">Every criterion was proven. The task closes as <code>done</code>.</td></tr>
+<tr><td>FAIL</td><td class="wrap">The builder fixes exactly what failed and the verifier checks again. After two failed rounds the task is <code>blocked</code>.</td></tr>
+<tr><td>UNVERIFIED</td><td class="wrap">Everything else passed, but a <code>[browser]</code> criterion couldn't be seen (no dev server or Playwright). The task goes to <code>review</code>, not <code>done</code>. Its log names what to check; when you've checked it, run <code>tasks.sh accept &lt;id&gt;</code> in your own terminal. Tasks that depend on it wait until then.</td></tr>
+<tr><td>SKIPPED</td><td class="wrap">Only for tiny changes: every criterion is <code>[review]</code> and the diff is at most 20 lines.</td></tr>
+</table>
+
+<h2>7. Running many tasks safely</h2>
+<p>Running tasks one after another in a single conversation lets context pile up, and quality drops by the 4th or 5th task. So <code>/laravel:task all</code> stops after 3. For longer batches use the runner, which starts a fresh session for every task:</p>
+<pre>bash .claude/hooks/run-tasks.sh --checkpoint                <span class="c"># all runnable tasks, in order</span>
+bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># just these, max $3 each</span></pre>
+<table>
+<thead><tr><th>Option</th><th>Effect</th></tr></thead>
+<tr><td><code>--checkpoint</code></td><td class="wrap">One local git commit per finished task, on a new branch <code>nw/batch-&lt;time&gt;</code> so main is never touched. Each commit holds only that task's files: never <code>.env</code> or keys, never edits that were already there.</td></tr>
+<tr><td><code>--no-branch</code></td><td class="wrap">With <code>--checkpoint</code>, commit on the current branch instead</td></tr>
+<tr><td><code>--budget USD</code></td><td class="wrap">Spending limit per task</td></tr>
+<tr><td><code>--max N</code></td><td class="wrap">Stop after N tasks</td></tr>
+<tr><td><code>--dry-run</code></td><td class="wrap">Show what would run, and run nothing</td></tr>
+</table>
+<p>The runner stops at the first task that doesn't finish (blocked, failed or over budget); run it again and it continues from there. A task that ends in <code>review</code> doesn't stop the batch: the runner tells you to check it and moves on to tasks that don't depend on it.</p>
+<p><b>Undo one task</b> (needs <code>--checkpoint</code>): <code>bash .claude/hooks/tasks.sh undo 004</code>. If later finished tasks depend on it, add <code>--cascade</code> to undo those first, newest first.</p>
+<p>When the batch looks good, run <code>/laravel:sync</code> (section 8). Claude can't push or open pull requests on its own.</p>
+
+<h2 class="pb">8. Git: one command to commit, pull, push</h2>
+<p>One command does the whole round. Only you can start it, so Claude never runs it on its own: <span class="new">new</span></p>
+<pre>/laravel:sync [commit message]</pre>
+<table>
+<thead><tr><th>Step</th><th>What happens</th></tr></thead>
+<tr><td>1. Commit</td><td class="wrap">Stages everything not ignored, refuses secret files, and commits with a message in your project's style (or yours, if you pass one).</td></tr>
+<tr><td>2. Pull</td><td class="wrap">Brings this branch's own remote commits and then the <b>stage branch</b> into the current branch (merge by default). Clear conflicts are resolved; unclear ones stop everything and are explained.</td></tr>
+<tr><td>3. Check</td><td class="wrap">If anything came in, the tests run again. A failure stops the push.</td></tr>
+<tr><td>4. Push</td><td class="wrap">Pushes the branch. It never pushes a branch that doesn't contain the stage branch's latest commit, and never force-pushes.</td></tr>
+</table>
+<div class="step"><div class="dot">1</div><div>
+<h4>Tell it your stage branch once</h4>
+<pre>./install.sh /path/to/app --stage-branch stage          <span class="c"># at install, or:</span>
+/laravel:setup                                             <span class="c"># asks, suggesting stage/staging/develop</span></pre>
+<p>It's stored in <code>.claude/workflow.conf</code> (<code>STAGE_BRANCH=stage</code>, <code>SYNC_MODE=merge</code>). Commit that file so the team shares it. If it's missing, the first <code>/laravel:sync</code> asks.</p>
+</div></div>
+<p>A plain <code>git push</code> from Claude is always blocked and redirected, so no push can skip the stage pull. The git work is done by <code>git-sync.sh</code> (<code>status</code>, <code>sync</code>, <code>push</code>, <code>stage</code>, <code>candidates</code>), which you can also run in your own terminal. With the Laravel kit, a push happens only after <b>you</b> type <code>/laravel:sync</code> (that counts as your go-ahead for 30 minutes); asking in plain words commits but doesn't push.</p>
+
+<h2>9. All commands and helpers</h2>
+<table>
+<thead><tr><th>Slash command</th><th>Model</th><th>Use it to…</th></tr></thead>
+<tr><td><code>/laravel:setup</code></td><td>current</td><td class="wrap">Connect the workflow to the project. Run once.</td></tr>
+<tr><td><code>/laravel:write-task &lt;what&gt;</code></td><td>Opus</td><td class="wrap">Plan work into draft tasks. Never writes code.</td></tr>
+<tr><td><code>/laravel:task [id|all|list]</code></td><td>Sonnet</td><td class="wrap">Build tasks: your main command.</td></tr>
+<tr><td><code>/laravel:feature &lt;id&gt;</code></td><td>Sonnet</td><td class="wrap">Force the full phased build (migration → model → route → view → tests → review).</td></tr>
+<tr><td><code>/laravel:test [target]</code></td><td>current</td><td class="wrap">Write or fix tests outside a task.</td></tr>
+<tr><td><code>/laravel:review [target]</code></td><td>Opus reviewer</td><td class="wrap">Review changes for authorization, injection, caching, N+1 and Blade escaping bugs.</td></tr>
+<tr><td><code>/laravel:audit [path]</code></td><td>current</td><td class="wrap">Performance and accessibility audit, ranked.</td></tr>
+<tr><td><code>/laravel:ship</code></td><td>current</td><td class="wrap">Tests, lint, static analysis, asset build and deploy steps. Never commits.</td></tr>
+</table>
+<p>Terminal helpers are below with the project-files path. With the plugin, use the <b>Kit helpers</b> path from the session report instead of <code>.claude/hooks</code>.</p>
+<table>
+<thead><tr><th>Terminal helper</th><th>Does</th></tr></thead>
+<tr><td><code>bash .claude/hooks/tasks.sh list</code></td><td class="wrap">Status of every task</td></tr>
+<tr><td><code>… tasks.sh approve &lt;id|all&gt;</code></td><td class="wrap">Draft → todo, after you've read it (your terminal only)</td></tr>
+<tr><td><code>… tasks.sh accept &lt;id&gt;</code></td><td class="wrap">Review → done, after you checked the UNVERIFIED criteria (your terminal only)</td></tr>
+<tr><td><code>… tasks.sh diff &lt;id&gt;</code></td><td class="wrap">Everything a task changed</td></tr>
+<tr><td><code>… tasks.sh undo &lt;id&gt; [--cascade]</code></td><td class="wrap">Revert a task's checkpoint commit (and its dependents)</td></tr>
+<tr><td><code>… tasks.sh map</code></td><td class="wrap">A short, cached map of the app: models with relations, controllers, routes, tables, views</td></tr>
+<tr><td><code>… tasks.sh context &lt;id&gt;</code></td><td class="wrap">The task plus what its dependencies did and changed</td></tr>
+<tr><td><code>… tasks.sh stats</code></td><td class="wrap">Tasks done, time per task, batch cost, verifier first-pass rate, which checks fire most</td></tr>
+<tr><td><code>… tasks.sh dir / migrate</code></td><td class="wrap">Which folder holds the tasks / move an older project's <code>tasks/</code> to <code>.claude/tasks/</code></td></tr>
+<tr><td><code>bash .claude/hooks/run-tasks.sh</code></td><td class="wrap">Batch runner, with a fresh session per task</td></tr>
+</table>
+
+<h2>10. The specialist agents</h2>
+<table>
+<thead><tr><th>Agent</th><th>Job</th><th>Can edit?</th></tr></thead>
+<tr><td><code>laravel-route-builder</code></td><td class="wrap">Routes, FormRequests, controllers, middleware, policies</td><td>Yes</td></tr>
+<tr><td><code>laravel-data-layer</code></td><td class="wrap">Migrations, models, queries, services, caching, jobs</td><td>Yes</td></tr>
+<tr><td><code>blade-ui-builder</code></td><td class="wrap">Views, components, Alpine, styling, the block-editor island</td><td>Yes</td></tr>
+<tr><td><code>laravel-test-writer</code></td><td class="wrap">Pest/PHPUnit tests</td><td>Yes</td></tr>
+<tr><td><code>laravel-verifier</code></td><td class="wrap">Checks every "done" criterion against the task and diff only</td><td class="wrap">Throwaway browser tests only</td></tr>
+<tr><td><code>laravel-reviewer</code></td><td class="wrap">Security and correctness review (always Opus)</td><td>No</td></tr>
+<tr><td><code>laravel-perf-auditor</code></td><td class="wrap">Queries, indexes, caching, queues, asset size</td><td>No</td></tr>
+<tr><td><code>blade-a11y-auditor</code></td><td class="wrap">Semantics, keyboard, labels, focus, contrast</td><td>No</td></tr>
+</table>
+<p>Every agent starts with the stack report and project memory, so it doesn't explore your code from scratch. With the plugin, agents are named <code>laravel:laravel-verifier</code> and so on.</p>
+
+<h2>11. Automatic checks (hooks)</h2>
+<table>
+<thead><tr><th>Check</th><th>When</th><th>What it does</th></tr></thead>
+<tr><td><code>session-context</code></td><td>Session start</td><td class="wrap">Reports the kit version, the Kit helpers path and your stack, points to the Laravel 13 notes, and loads the project memory and task counts. Reloaded after compaction.</td></tr>
+<tr><td><code>guard-php</code></td><td>After edits</td><td class="wrap">Blocks <code>env()</code> outside config, mass assignment from the raw request, raw SQL built from variables, <code>dd()</code>, Laravel 8/9 file structure, SSRF and path traversal from request input, <code>upsert()</code> without its unique columns. Advises on N+1, Redis <code>KEYS</code>, <code>Cache::flush()</code>, unsafe upload names and image work in the request.</td></tr>
+<tr><td><code>guard-blade</code></td><td>After edits</td><td class="wrap">Blocks a missing <code>@csrf</code>, unescaped request data, and queries in views.</td></tr>
+<tr><td><code>guard-styles</code></td><td>After edits</td><td class="wrap">Checks Tailwind classes against the version you actually have installed.</td></tr>
+<tr><td><code>guard-editor</code></td><td>After edits</td><td class="wrap">Flags CKEditor/TinyMCE/Summernote/Quill in Post/Page code.</td></tr>
+<tr><td><code>guard-comments</code></td><td>Before edits</td><td class="wrap">Code written for a task carries no comments. Blocks an edit that adds a comment line, before the file is written. Comments already in the file, PHP attributes, tooling directives (<code>@phpstan-ignore</code>, <code>@ts-expect-error</code>) and type-only docblock tags (<code>@return HasMany&lt;Post, $this&gt;</code>) are allowed. <span class="new">2.4</span></td></tr>
+<tr><td><code>format</code></td><td>After edits</td><td class="wrap">Runs your project's own Pint (or Prettier for JS/CSS).</td></tr>
+<tr><td><code>bash-guard</code></td><td>After shell commands</td><td class="wrap">Files written through the shell get the same checks.</td></tr>
+<tr><td><code>guard-secrets</code></td><td>Before shell commands</td><td class="wrap">Blocks commands that read <code>.env</code> files, keys or <code>auth.json</code>. <code>.env.example</code> is allowed. It slows accidents down but isn't a security boundary (section 16).</td></tr>
+<tr><td><code>guard-owner</code></td><td>Before shell commands</td><td class="wrap">Keeps your decisions yours: blocks <code>git push</code>, <code>gh pr create</code>/<code>merge</code>, <code>tasks.sh approve</code>/<code>accept</code>, shell edits of a task's status, and <code>verify.sh --baseline</code>. <span class="new">2.3</span></td></tr>
+<tr><td><code>verify</code></td><td>Before Claude finishes</td><td class="wrap"><code>php -l</code> on changed PHP; optionally Pint and PHPStan (only new findings fail).</td></tr>
+<tr><td><code>guard-read</code>, <code>allow-helpers</code></td><td>Plugin only</td><td class="wrap">Stand in for the permission rules a plugin can't carry: block reading secret files, pre-approve the kit's own helpers, verify commands and Boost's read-only tools. Anything chained or unusual still asks you. <span class="new">2.4</span></td></tr>
+</table>
+<p>Every check hit is recorded in <code>.claude/.cache/metrics.jsonl</code>. <code>tasks.sh stats</code> summarises them.</p>
+
+<h2>12. Post and Page content: Gutenberg</h2>
+<p>Every Post, Page, News or Article module uses WordPress's own block editor (<code>@wordpress/block-editor</code>), mounted as a small React component in your Blade form through Vite. It never uses CKEditor or TinyMCE.</p>
+<ul>
+<li><b>Storage:</b> <code>content</code> holds the block format (exactly like WordPress); <code>content_html</code> is a sanitized copy made when you save.</li>
+<li><b>Display:</b> the public page outputs <code>{!! $post-&gt;content_html !!}</code>, the only unescaped output allowed.</li>
+<li><b>Images:</b> they upload through a protected Laravel route to your disk or CDN.</li>
+<li><b>Tests:</b> the planner adds them automatically: harmful HTML is stripped, authors can't edit each other's posts, and the editor saves a heading, a paragraph and an image.</li>
+</ul>
+<p>Why not Laraberg? Its last release was in January 2023, and it relies on React 17, jQuery and Moment.</p>
+
+<h2>13. Redis, uploads, S3 and CDN</h2>
+<ul>
+<li><b>Redis:</b> phpredis is preferred (predis if your project already uses it). Cache data lives on its own connection. Every cached value needs a way to be cleared. Use tags only on Redis or Memcached. Never use <code>KEYS</code> or <code>Cache::flush()</code> on a shared Redis. On Laravel 13, cache arrays, not models.</li>
+<li><b>Uploads:</b> validate with <code>File::image()-&gt;max('5mb')-&gt;dimensions(…)</code> (SVG is rejected by default). Store with random names, never the client's file name.</li>
+<li><b>Public vs private:</b> public files use <code>storePublicly</code> and are served from the CDN. Private files are stored privately and served with <code>temporaryUrl()</code> after a permission check.</li>
+<li><b>CDN:</b> set <code>AWS_URL=https://cdn.example.com</code> and <code>Storage::url()</code> returns CDN links. Store paths in the database, never full URLs. Never-changing file names with long cache headers mean you never have to purge the CDN.</li>
+<li><b>Images:</b> resize, convert to WebP and create size variants in a queued job, not during the request.</li>
+</ul>
+
+<h2>14. Settings you can change</h2>
+<p>Set these in your shell before starting <code>claude</code> (or before the batch runner), or in the <code>env</code> section of your Claude Code settings.</p>
+<table class="set">
+<thead><tr><th>Variable</th><th>Values</th><th>Effect</th></tr></thead>
+<tr><td><code>LARAVEL_WF_CHECKPOINT</code></td><td><code>commit</code></td><td class="wrap">One local commit per finished task (the runner's <code>--checkpoint</code> sets this)</td></tr>
+<tr><td><code>LARAVEL_WF_DEV_URL</code></td><td class="wrap">e.g. <code>http://localhost:8000</code></td><td class="wrap">Lets the verifier check <code>[browser]</code> criteria (needs <code>@playwright/test</code>; the kit brings its own config)</td></tr>
+<tr><td><code>LARAVEL_WF_VERIFY</code></td><td class="wrap"><code>syntax</code> (default), <code>syntax,lint,analyse</code>, <code>off</code></td><td class="wrap">What runs before Claude finishes</td></tr>
+<tr><td><code>LARAVEL_WF_REQUIRE_VERDICT</code></td><td><code>on</code>, <code>off</code></td><td class="wrap">The verdict gate on close (section 6)</td></tr>
+<tr><td><code>LARAVEL_WF_ALLOW_PUSH</code></td><td><code>1</code></td><td class="wrap">Let Claude push (still through <code>git-sync.sh</code>) and open/merge pull requests without you typing <code>/laravel:sync</code></td></tr>
+<tr><td><code>LARAVEL_WF_STAGE_BRANCH</code>, <code>…_SYNC_MODE</code></td><td class="wrap">a branch; <code>merge</code>, <code>rebase</code></td><td class="wrap">Override <code>.claude/workflow.conf</code> (section 8)</td></tr>
+<tr><td><code>LARAVEL_WF_PHP_GUARD</code>, <code>…_BLADE_GUARD</code></td><td><code>warn</code>, <code>off</code></td><td class="wrap">Soften a guard</td></tr>
+<tr><td><code>LARAVEL_WF_EDITOR_GUARD</code>, <code>…_STYLE_GUARD</code>, <code>…_SECRETS_GUARD</code></td><td><code>off</code></td><td class="wrap">Turn a guard off</td></tr>
+<tr><td><code>LARAVEL_WF_COMMENT_GUARD</code></td><td><code>on</code>, <code>off</code></td><td class="wrap">The no-comments check (section 11)</td></tr>
+<tr><td><code>LARAVEL_WF_TASKS_DIR</code></td><td>a folder</td><td class="wrap">Keep tasks somewhere other than <code>.claude/tasks</code></td></tr>
+<tr><td><code>LARAVEL_WF_METRICS</code></td><td><code>on</code>, <code>off</code></td><td class="wrap">Recording to <code>metrics.jsonl</code></td></tr>
+</table>
+<p><b>Update:</b> plugin: <code>claude plugin update laravel@laravel-workflow</code>. Project files: run <code>./install.sh /path/to/app</code> again. <b>Remove:</b> <code>claude plugin uninstall laravel@laravel-workflow</code>, or <code>./install.sh /path/to/app --uninstall</code>, which removes the kit's files and hook entries and keeps your tasks, memory and own settings.</p>
+
+<h2>15. A typical day</h2>
+<ol>
+<li><code>/laravel:write-task …</code>, then answer its questions.</li>
+<li>Read the drafts in <code>.claude/tasks/</code>, then <code>tasks.sh approve all</code> in your own terminal.</li>
+<li>Optional: start <code>php artisan serve</code> and set <code>LARAVEL_WF_DEV_URL</code> so browser checks really run.</li>
+<li><code>bash .claude/hooks/run-tasks.sh --checkpoint</code> and let it work, or <code>/laravel:task</code> for one at a time.</li>
+<li>Check the result. For tasks in <code>review</code>, check the criteria named in their log, then <code>tasks.sh accept &lt;id&gt;</code>. Undo any task you don't like with <code>tasks.sh undo &lt;id&gt;</code>.</li>
+<li><code>/laravel:review</code>, then <code>/laravel:ship</code>. When everything is green, <code>/laravel:sync</code>: it pulls the stage branch in, re-runs the tests and pushes.</li>
+<li>Now and then, run <code>tasks.sh stats</code> to see cost, time, the verifier's pass rate and which checks fire most.</li>
+</ol>
+
+<h2>16. Problems and fixes</h2>
+<table>
+<thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+<tr><td class="wrap">Every turn fails on old PHPStan findings</td><td class="wrap">Record them once: <code>! bash .claude/hooks/verify.sh --baseline</code></td></tr>
+<tr><td class="wrap">"task is still a draft"</td><td class="wrap">Read it, then <code>tasks.sh approve &lt;id&gt;</code> in your own terminal.</td></tr>
+<tr><td class="wrap">"no verdict recorded" when closing</td><td class="wrap">Intended: every task needs the verifier's verdict (section 6). Let <code>/laravel:task</code> finish the verification step.</td></tr>
+<tr><td class="wrap">A task waits in <code>review</code></td><td class="wrap">A <code>[browser]</code> criterion couldn't be checked. Check it yourself, then <code>tasks.sh accept &lt;id&gt;</code>.</td></tr>
+<tr><td class="wrap">The verifier marks <code>[browser]</code> items UNVERIFIED</td><td class="wrap">Start the app, set <code>LARAVEL_WF_DEV_URL</code>, and install Playwright.</td></tr>
+<tr><td class="wrap">Claude was blocked from pushing</td><td class="wrap">Intended: type <code>/laravel:sync</code>, or run <code>git-sync.sh push</code> yourself.</td></tr>
+<tr><td class="wrap"><code>/laravel:sync</code> stopped on a conflict</td><td class="wrap">The stage branch changed the same lines. Resolve them (or ask Claude to), then run <code>/laravel:sync</code> again. Nothing was pushed.</td></tr>
+<tr><td class="wrap">"installed twice" at session start</td><td class="wrap">The project has both the plugin and project files. Keep one: <code>./install.sh /path/to/app --uninstall</code>, or disable the plugin.</td></tr>
+<tr><td class="wrap">Plugin: a helper command still asks permission</td><td class="wrap">Only plain helper and verify commands are pre-approved. Anything chained, with flags, or matching one of your own ask rules asks on purpose.</td></tr>
+<tr><td class="wrap"><code>undo</code> says there's no checkpoint</td><td class="wrap">The task was closed without <code>--checkpoint</code>. Use <code>tasks.sh diff</code> and revert by hand.</td></tr>
+<tr><td class="wrap">"checkpoint: SKIPPED — secret files changed"</td><td class="wrap">Add the file to <code>.gitignore</code>, then commit the task's files yourself. Nothing was committed.</td></tr>
+<tr><td class="wrap">Claude asks permission to edit a file in <code>.claude/</code></td><td class="wrap">Normal: Claude Code protects that folder. New drafts don't ask, because they're written by <code>tasks.sh new</code>. Approve edits you asked for, or pick "allow for this session".</td></tr>
+<tr><td class="wrap">Your tasks are still in <code>tasks/</code> after an upgrade</td><td class="wrap">They keep working. Move them with <code>tasks.sh migrate</code>.</td></tr>
+<tr><td class="wrap">A plan file in <code>.claude/tasks/</code> is ignored</td><td class="wrap">That's intended: only files starting with <code>---</code> frontmatter are tasks.</td></tr>
+<tr><td class="wrap">A command was blocked for touching <code>.env</code></td><td class="wrap">Intended. Run it yourself, or use <code>.env.example</code>. The guard can't catch everything: for real protection keep production secrets out of the project folder, or use Claude Code's sandbox (<code>/sandbox</code>).</td></tr>
+<tr><td class="wrap">Boost tools not used</td><td class="wrap">Install Boost (section 4) and approve the <code>.mcp.json</code> server.</td></tr>
+<tr><td class="wrap">An edit was blocked for adding a comment</td><td class="wrap">Intended: Claude rewrites it without the comment. To allow comments, set <code>LARAVEL_WF_COMMENT_GUARD=off</code>.</td></tr>
+<tr><td class="wrap">A guard flags code you need</td><td class="wrap">Set that guard to <code>warn</code> or <code>off</code> (section 14).</td></tr>
+</table>
+
+<h2 class="pb">17. What's new in 2.4 and 2.3</h2>
+<table>
+<thead><tr><th>Change</th><th>What it means for you</th></tr></thead>
+<tr><td>Git commands <span class="new">2.4</span></td><td class="wrap"><code>/laravel:sync</code> commits, pulls the stage branch in, checks and pushes in one go. Every push pulls the stage branch in first (section 8).</td></tr>
+<tr><td>Plugin install <span class="new">2.4</span></td><td class="wrap">Install once, update with one command, nothing copied into projects (section 3). The commands stay <code>/laravel:*</code>; the session report prints where the helpers are.</td></tr>
+<tr><td>Plugin safety <span class="new">2.4</span></td><td class="wrap">Guards always run, even if a project file tries to replace one. The kit's helpers are approved only by the plugin's own absolute path, and verify commands only with plain file arguments.</td></tr>
+<tr><td>Pure code <span class="new">2.4</span></td><td class="wrap">Code written for a task has no comments. The rule is in every builder's instructions, and <code>guard-comments</code> blocks an edit that adds one, so Claude rewrites it without.</td></tr>
+<tr><td>Verdict gate <span class="new">2.3</span></td><td class="wrap">A task can't close without the verifier's verdict. A FAIL must be fixed and checked again first.</td></tr>
+<tr><td>Review status <span class="new">2.3</span></td><td class="wrap">Work with unchecked <code>[browser]</code> criteria goes to <code>review</code>; you <code>accept</code> it. Dependent tasks wait; the runner moves on to independent ones.</td></tr>
+<tr><td>Owner guard <span class="new">2.3</span></td><td class="wrap">Claude can't push, open or merge pull requests, approve its own drafts, accept its own work, or change a task's status around the helper.</td></tr>
+<tr><td>Fixes</td><td class="wrap">The secrets guard's message no longer lists your folder's files when it blocks a pattern like <code>.e*</code>.</td></tr>
+</table>
+<h3>Earlier releases</h3>
+<table>
+<thead><tr><th>Version</th><th>Main change</th></tr></thead>
+<tr><td>2.2</td><td class="wrap">Tasks live in <code>.claude/tasks/</code>, and drafts are written by <code>tasks.sh new</code> with no permission prompt per draft. Only files starting with <code>---</code> count as tasks.</td></tr>
+<tr><td>2.1</td><td class="wrap">Context memory: repo map, task handoff, subagents start with the stack report, memory reloaded after compaction.</td></tr>
+<tr><td>2.0</td><td class="wrap">The verifier agent, draft → approve, a fresh session per task, per-task commits and undo, the static-analysis baseline, metrics, Laravel 13 rules, Boost, Gutenberg.</td></tr>
+</table>
+<p>Every change is listed in <code>CHANGELOG.md</code> in the kit.</p>
+
+<h2>18. Measuring the workflow</h2>
+<pre>./test.sh                          <span class="c"># the kit's self-test, against throwaway fixtures</span>
+bash evals/run.sh --reference      <span class="c"># free: proves every eval check can pass on a real Laravel app (must be 5/5)</span>
+bash evals/run.sh                  <span class="c"># 3 real agent runs (costs API money)</span></pre>
+<p>Results land in <code>evals/results/</code>. Compare them before and after changing any command, agent or skill. A change that lowers the pass rate or raises the cost is a regression.</p>
+
+</body>
+</html>

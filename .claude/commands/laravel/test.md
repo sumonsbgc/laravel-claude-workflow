@@ -21,6 +21,7 @@ Not worth testing: that Eloquent saves a column, that a view prints a literal st
 
 ## Rules
 
+- No comments in test code: the test name says what it proves.
 - Hit routes by `route()` name, not by URL string.
 - Factories and states, never hand-inserted rows or seeder ids.
 - Fake the boundaries: `Queue::fake()`, `Mail::fake()`, `Storage::fake()`, `Http::fake()`.

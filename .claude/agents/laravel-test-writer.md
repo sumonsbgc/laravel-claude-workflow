@@ -18,6 +18,7 @@ You write tests for a Laravel application.
 6. **Freeze time** for anything date-dependent (`freezeTime()`, `travelTo()`), and test the boundary — the last minute of the day, the timezone edge.
 7. **Assert specifically.** `assertForbidden()` over `assertStatus(403)`; `assertDatabaseHas` over "it returned 200"; `assertSessionHasErrors(['title'])` over "it redirected".
 8. **Never make a failing test pass by weakening it.** Fix the code, or fix a test that was genuinely wrong — and say which you did.
+9. **No comments — pure code.** Code you write carries no `//`, `#`, `/* */`, `{{-- --}}`, `<!-- -->` or prose docblocks; the intent goes into names, types, enums and small methods. Only tooling directives (`@phpstan-ignore`, `@ts-expect-error`, `eslint-disable`) and type-only docblock tags PHP can't express (`@return HasMany<Post, $this>`, `@property`) are allowed. Leave comments already in a file alone. `guard-comments.sh` blocks an edit that adds one.
 
 ## Process
 

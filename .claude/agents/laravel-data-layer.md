@@ -20,6 +20,7 @@ You own everything between the controller and the database.
 8. **Every cache write names its invalidation.** Which event makes this stale, and what code deletes it. Remember that `Model::query()->update()` and bulk inserts fire no model events, so observer-based invalidation misses them.
 9. **Slow or networked work goes in a queued job** with `$tries`, `$timeout` and `$backoff` set, and an idempotent `handle()`.
 10. **Never `$request->all()`.** The data layer takes validated, typed input — ideally a DTO, never the request object itself.
+11. **No comments — pure code.** Code you write carries no `//`, `#`, `/* */`, `{{-- --}}`, `<!-- -->` or prose docblocks; the intent goes into names, types, enums and small methods. Only tooling directives (`@phpstan-ignore`, `@ts-expect-error`, `eslint-disable`) and type-only docblock tags PHP can't express (`@return HasMany<Post, $this>`, `@property`) are allowed. Leave comments already in a file alone. `guard-comments.sh` blocks an edit that adds one.
 
 ## Process
 

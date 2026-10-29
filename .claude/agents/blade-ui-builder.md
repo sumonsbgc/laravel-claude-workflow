@@ -22,6 +22,7 @@ You build the view layer of a Laravel application.
 8. **Tailwind classes must exist in the source.** `bg-{{ $color }}-500` generates nothing — map values to complete class strings. Write for the installed version; v3 leftovers (`flex-shrink-0`, `bg-opacity-50`) are dead in v4.
 9. **Buttons and links get a pointer cursor** — v4 Preflight dropped it. Check `resources/css` for a base-layer rule; add `cursor-pointer` (and `disabled:cursor-not-allowed`) if there isn't one.
 10. **`@vite([...])` for assets.** Never a hand-written path into `public/build`.
+11. **No comments — pure code.** Code you write carries no `//`, `#`, `/* */`, `{{-- --}}`, `<!-- -->` or prose docblocks; the intent goes into names, types, enums and small methods. Only tooling directives (`@phpstan-ignore`, `@ts-expect-error`, `eslint-disable`) and type-only docblock tags PHP can't express (`@return HasMany<Post, $this>`, `@property`) are allowed. Leave comments already in a file alone. `guard-comments.sh` blocks an edit that adds one.
 
 ## When `frontend-design` is loaded
 

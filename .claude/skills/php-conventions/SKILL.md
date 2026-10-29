@@ -77,13 +77,15 @@ See `references/errors-and-exceptions.md` for the shapes.
 - Group related classes into a namespace that matches the directory, PSR-4.
 - Helper functions live in a file autoloaded via `composer.json` `autoload.files` — and must be in `autoload`, not `autoload-dev`, or `composer install --no-dev` breaks production.
 
-## Comments and dead code
+## No comments, no dead code
 
-- Comment **why**, never what. A comment restating the line is noise that goes stale.
-- The good comment explains a constraint that is not visible: why this order, why this timeout, what breaks if you change it.
+- **The code you write carries no comments.** No `//`, `#` or `/* */` in PHP, no prose docblocks, no `{{-- --}}` or `<!-- -->` in Blade, none in JS or CSS. Pure code: say the intent through names, types, enums and small methods. A comment that feels necessary means the code wants a better name or one more method.
+- Allowed, because tooling needs them: type-only docblock tags PHP cannot express (`@param array<string, News[]>`, `@return HasMany<Post, $this>`, `@property`, `@throws`), `@phpstan-ignore` (give the reason in your report, not in the code), and license headers that already exist.
+- Comments already in a file stay as they are; don't add new ones beside them.
+- The `//` notes in this skill's and its references' examples are explanations for you. Never copy them into code.
 - Delete dead code instead of commenting it out — git remembers.
-- No `TODO` without a name or an issue; an anonymous TODO is a wish.
-- Docblocks only where they add type information PHP cannot express (`@param array<string, News[]>`) or document a thrown exception.
+- No `TODO`s: finish it, or record the rest as a new task.
+- `guard-comments.sh` blocks an Edit/Write that adds a comment, before the file is written (`LARAVEL_WF_COMMENT_GUARD=off` is the user's switch).
 
 ## References
 

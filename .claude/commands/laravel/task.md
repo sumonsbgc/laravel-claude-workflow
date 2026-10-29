@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task, TodoWrite, Skill
 
 Argument: **$ARGUMENTS**
 
-`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, or `~/.claude/hooks` on a global install). Use it for all task bookkeeping. Never glob or read `tasks/*.md` yourself; that is what the helper is for and it costs a fraction of the tokens.
+`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, `~/.claude/hooks` on a global install, or the plugin's folder). Use it for all task bookkeeping. Never glob or read `tasks/*.md` yourself; that is what the helper is for and it costs a fraction of the tokens.
 
 | Argument | Do |
 |---|---|
@@ -31,8 +31,9 @@ You are running against a task list, not a conversation. The same waste repeated
 5. **Load skills by need, not by habit** — see the table below. A Blade tweak does not need the Eloquent conventions.
 6. **Delegate only what pays for itself.** A subagent starts cold and re-reads context you already have; it is worth it when the work is genuinely a separate layer with its own conventions, and a waste for a two-file change. Route by size — see **Routing**.
 7. **Edit source files only with Edit/Write**, never with `sed -i`, heredocs or scripts. The guards, Pint and the syntax check run on Edit/Write; shell writes are caught after the fact and cost you a round-trip.
-8. **Verify proportionally** — see **Verification**. A full suite after every one-line Blade change is minutes of wall clock for nothing.
-9. **Report in tens of lines, not hundreds.** No file dumps, no restating the diff, no narrating what you are about to do.
+8. **No comments — pure code.** Nothing you write carries a comment: no `//`, `#`, `/* */`, `{{-- --}}`, `<!-- -->` or prose docblocks. Names, types and small methods carry the intent. Only tooling directives and type-only docblock tags are allowed; `guard-comments.sh` blocks the rest, so writing them only costs a retry.
+9. **Verify proportionally** — see **Verification**. A full suite after every one-line Blade change is minutes of wall clock for nothing.
+10. **Report in tens of lines, not hundreds.** No file dumps, no restating the diff, no narrating what you are about to do.
 
 ### Which skill for which task
 
@@ -57,20 +58,20 @@ Load the reference, not the whole skill, when the reference is what you need.
 
 ## Running one task
 
-1. **Claim it.** `bash $T start <id>`. If it refuses because the task is a `draft`, stop and tell the user to review it and run `bash $T approve <id>`. Drafts are unreviewed plans.
+1. **Claim it.** `bash $T start <id>`. If it refuses because the task is a `draft`, stop and tell the user to review it and run `bash $T approve <id>` **in their own terminal**. Drafts are unreviewed plans; approving one is never your step (it refuses inside Claude Code).
 2. **Read it.** `bash $T context <id>` (the task plus its dependencies' handoff). The Acceptance list is the definition of done — you will check each item at the end.
 3. **Orient, cheaply.** From the project context you should already know where things go. If something genuinely isn't recorded there, find it with one targeted grep and read at most one existing analogue — then add what you learned to the context file at the end.
 4. **Decide the shape before writing.** The files you will touch, the route and its authorization, what the data layer must expose, what the view is given. Views render; controllers stay thin; the operation lives in a service or action.
 5. **Implement.** Every `[test]` criterion needs a Pest/PHPUnit test that asserts it, because the verifier will look for it. Follow the conventions; the PostToolUse guards will tell you immediately if you break an escaping, mass-assignment, `env()`, N+1 or Tailwind rule — fix what they report rather than arguing with them.
 6. **Verify** — see below.
-7. **Get an independent verdict.** First run `bash $T can-skip-verify <id>`.
+7. **Get an independent verdict — never skipped.** `close` refuses until a verdict is recorded. First run `bash $T can-skip-verify <id>`.
    - It says `yes` (every criterion is `[review]` and the diff is 20 lines or fewer): check the list yourself, item by item, and record `bash $T verdict <id> SKIPPED`.
    - Otherwise delegate to `laravel-verifier` with just the task id. It reads the task and `bash $T diff <id>` itself, and never sees your reasoning. That's the point. After **every** verifier round, record it with `bash $T verdict <id> PASS|FAIL|UNVERIFIED <round>` (`PASS WITH UNVERIFIED` → `UNVERIFIED`).
    - `FAIL` → fix exactly what it lists, re-verify. After two failed rounds, `bash $T block <id> "<the failing criteria>"` and stop.
-   - `PASS WITH UNVERIFIED` → close, and name the unverified `[browser]` criteria in the log line so the user can check them.
+   - `PASS WITH UNVERIFIED` → close, and name the unverified `[browser]` criteria in the log line. `close` then leaves the task in `review`, not `done`: tell the user exactly what to check, and that they run `bash $T accept <id>` in their own terminal. Dependent tasks wait until they do.
 8. **Close it.** `bash $T close <id> "<one line: what you did and any decision you made>"`.
-9. **Record what you learned** — see **Memory**.
-9. **Record what you learned** — see **Memory**.
+9. **Never publish.** No `git push`, no `gh pr create`/`merge` — a hook blocks them. Leave the work in the tree (or in local checkpoint commits) and tell the user it is ready.
+10. **Record what you learned** — see **Memory**.
 
 ### Ambiguity
 
@@ -108,7 +109,7 @@ Use the exact commands from the session-start report. Fix what fails before clos
 Every task in one conversation means context grows with each one, and by the fifth task details get compacted away and quality drops. So in-session batches are capped:
 
 - Run **at most 3** runnable tasks this way: `bash $T next` → run it fully → close it → repeat.
-- If more remain, stop and tell the user to run the rest with fresh context per task: `bash .claude/hooks/run-tasks.sh` (add `--checkpoint` for one local commit per task on its own branch, so any single task can be undone with `bash $T undo <id>`).
+- If more remain, stop and tell the user to run the rest with fresh context per task: `bash <Kit helpers>/run-tasks.sh` (add `--checkpoint` for one local commit per task on its own branch, so any single task can be undone with `bash $T undo <id>`).
 - Stop early if a task ends `blocked`, verification fails in a way you cannot fix, or a task needs a decision only the user can make. Report which tasks completed and which is stuck.
 - Run the **full** verification (tests, lint, build) once at the end of the batch, not after every task.
 

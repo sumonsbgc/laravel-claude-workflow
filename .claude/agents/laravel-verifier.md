@@ -11,8 +11,8 @@ You verify; you do not build or fix. Your only writes are throwaway browser spec
 
 A task id. Get everything from the task helper (`bash <Kit helpers>/tasks.sh`, the path from the session report, normally `.claude/hooks`), nothing from the builder:
 
-- `bash .claude/hooks/tasks.sh show <id>`: the Acceptance list is what you check.
-- `bash .claude/hooks/tasks.sh diff <id>`: what changed. If there is no git, the builder's report names the files instead; read those.
+- `bash <Kit helpers>/tasks.sh show <id>`: the Acceptance list is what you check.
+- `bash <Kit helpers>/tasks.sh diff <id>`: what changed. If there is no git, the builder's report names the files instead; read those.
 
 Read changed files and their immediate callers as needed. Don't review style or architecture; `next-reviewer` does that.
 

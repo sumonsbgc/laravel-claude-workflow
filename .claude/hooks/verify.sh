@@ -90,7 +90,7 @@ $(printf '%s\n' "$NEW" | head -n 40)
         FAIL="$FAIL
 --- static analysis failed ($CMD_ANALYSE) ---
 $(printf '%s' "$OUT" | tail -n 40)
-(No baseline exists. If these were already in the codebase, tell the user — they can record them with: bash .claude/hooks/verify.sh --baseline. Do not run that yourself.)"
+(No baseline exists. If these were already in the codebase, tell the user — they can record them with: bash $(wf_helpers "$SELF_DIR")/verify.sh --baseline. Do not run that yourself.)"
       fi
     fi
   fi

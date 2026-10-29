@@ -1,0 +1,27 @@
+{
+  "name": "laravel",
+  "version": "2.4.0",
+  "description": "Laravel + Blade workflow: plan tasks with /laravel:write-task, build them with /laravel:task, independent verification, stack-aware guards and project memory.",
+  "author": {
+    "name": "Mohammad Sumon"
+  },
+  "keywords": [
+    "laravel",
+    "php",
+    "blade",
+    "workflow",
+    "tasks"
+  ],
+  "commands": "./.claude/commands/laravel/",
+  "agents": [
+    "./.claude/agents/blade-a11y-auditor.md",
+    "./.claude/agents/blade-ui-builder.md",
+    "./.claude/agents/laravel-data-layer.md",
+    "./.claude/agents/laravel-perf-auditor.md",
+    "./.claude/agents/laravel-reviewer.md",
+    "./.claude/agents/laravel-route-builder.md",
+    "./.claude/agents/laravel-test-writer.md",
+    "./.claude/agents/laravel-verifier.md"
+  ],
+  "skills": "./.claude/skills/"
+}

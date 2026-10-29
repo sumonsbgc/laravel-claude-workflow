@@ -76,8 +76,8 @@ while :; do
   P="$(bash "$T" path "$ID" 2>/dev/null)" || { echo "no task $ID" >&2; break; }
   ST="$(task_field "$P" status)"
   case "$ST" in
-    done) N=$((N+1)); continue ;;
-    draft) echo "task $ID is a draft — approve it first: bash .claude/hooks/tasks.sh approve $ID"; break ;;
+    done|review) N=$((N+1)); continue ;;
+    draft) echo "task $ID is a draft — approve it first: bash $(wf_helpers "$SELF_DIR")/tasks.sh approve $ID"; break ;;
   esac
   [ "$ID" = "$LAST" ] && { echo "task $ID did not finish on the previous run — stopping to avoid a loop"; break; }
   LAST="$ID"
@@ -99,9 +99,15 @@ while :; do
   LINE="$(printf '  %-6s %-8s %4ss  %3s turns  $%s' "$ID" "$ST" "$SECS" "$TURNS" "$COST")"
   echo "$LINE"; SUMMARY="$SUMMARY$LINE\n"
   N=$((N+1))
+  if [ "$ST" = review ]; then
+    # Built and verified as far as a machine can; tasks that depend on it wait for the user's accept.
+    echo "  task $ID needs your check (UNVERIFIED criteria in its log), then: bash $(wf_helpers "$SELF_DIR")/tasks.sh accept $ID"
+    SUMMARY="$SUMMARY  -> $ID waits for: tasks.sh accept $ID\n"
+    continue
+  fi
   if [ "$ST" != "done" ]; then
     [ "$ERRFLAG" = true ] && echo "  the session ended with an error (budget or turn limit?)"
-    echo "  stopping: task $ID is '$ST'. Its log says why: bash .claude/hooks/tasks.sh show $ID"
+    echo "  stopping: task $ID is '$ST'. Its log says why: bash $(wf_helpers "$SELF_DIR")/tasks.sh show $ID"
     break
   fi
 done

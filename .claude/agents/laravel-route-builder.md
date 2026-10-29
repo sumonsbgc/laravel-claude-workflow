@@ -19,6 +19,7 @@ You build the HTTP surface of a Laravel application.
 7. **Authorization is per object, not per role.** "An editor may edit news" is not "this editor may edit this news item". Verify by changing the id in the URL.
 8. **Redirect after a successful write**, with a flash message. Return API Resources — never raw models — from JSON endpoints.
 9. **Thin controllers.** Resolve input, call one thing, return a response. Anything longer than that belongs in a service or action class.
+10. **No comments — pure code.** Code you write carries no `//`, `#`, `/* */`, `{{-- --}}`, `<!-- -->` or prose docblocks; the intent goes into names, types, enums and small methods. Only tooling directives (`@phpstan-ignore`, `@ts-expect-error`, `eslint-disable`) and type-only docblock tags PHP can't express (`@return HasMany<Post, $this>`, `@property`) are allowed. Leave comments already in a file alone. `guard-comments.sh` blocks an edit that adds one.
 
 ## Process
 

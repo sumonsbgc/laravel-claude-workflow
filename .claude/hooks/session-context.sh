@@ -10,9 +10,8 @@ ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 eval "$(bash "$SELF_DIR/stack.sh")"
 [ -n "$LARAVEL_VERSION" ] || exit 0   # not a Laravel project; stay quiet
 bash "$SELF_DIR/bash-guard.sh" --snapshot >/dev/null 2>&1   # baseline for shell-change detection
-# shellcheck disable=SC2088  # a literal "~" for display, not a path to expand
-if [ "$SELF_DIR" = "$ROOT/.claude/hooks" ]; then HELPERS=".claude/hooks"; else HELPERS="~/.claude/hooks"; fi
-KIT_VERSION="$(cat "$ROOT/.claude/laravel-workflow.version" 2>/dev/null || cat "$SELF_DIR/../laravel-workflow.version" 2>/dev/null || echo unknown)"
+HELPERS="$(wf_helpers "$SELF_DIR")"
+KIT_VERSION="$(cat "$ROOT/.claude/laravel-workflow.version" 2>/dev/null || cat "$SELF_DIR/../laravel-workflow.version" 2>/dev/null || cat "$SELF_DIR/../../VERSION" 2>/dev/null || echo unknown)"
 
 # Version-specific guidance: verified notes per major live in the skill's references.
 if [ "${LARAVEL_MAJOR:-0}" -ge 13 ] 2>/dev/null; then
@@ -71,13 +70,27 @@ if [ -n "$TDIR" ] && [ -d "$ROOT/$TDIR" ] && [ -x "$SELF_DIR/tasks.sh" ]; then
   DOING="$(CLAUDE_PROJECT_DIR="$ROOT" "$SELF_DIR/tasks.sh" count doing 2>/dev/null || echo 0)"
   BLOCKED="$(CLAUDE_PROJECT_DIR="$ROOT" "$SELF_DIR/tasks.sh" count blocked 2>/dev/null || echo 0)"
   DRAFT="$(CLAUDE_PROJECT_DIR="$ROOT" "$SELF_DIR/tasks.sh" count draft 2>/dev/null || echo 0)"
+  REVIEW="$(CLAUDE_PROJECT_DIR="$ROOT" "$SELF_DIR/tasks.sh" count review 2>/dev/null || echo 0)"
   PARTS=""
   [ "${DRAFT:-0}" -gt 0 ] 2>/dev/null   && PARTS="$DRAFT draft (awaiting approval)"
   [ "${TODO:-0}" -gt 0 ] 2>/dev/null    && PARTS="${PARTS:+$PARTS, }$TODO todo"
   [ "${DOING:-0}" -gt 0 ] 2>/dev/null   && PARTS="${PARTS:+$PARTS, }$DOING in progress"
   [ "${BLOCKED:-0}" -gt 0 ] 2>/dev/null && PARTS="${PARTS:+$PARTS, }$BLOCKED blocked"
+  [ "${REVIEW:-0}" -gt 0 ] 2>/dev/null  && PARTS="${PARTS:+$PARTS, }$REVIEW awaiting the user's check (accept)"
   [ -n "$PARTS" ] && TASKS="
 - Tasks: $PARTS — \`/laravel:task\` runs the next one, \`/laravel:task list\` shows them all."
+fi
+
+GITLINE=""
+if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
+  STAGE_NOW="$(CLAUDE_PROJECT_DIR="$ROOT" bash "$SELF_DIR/git-sync.sh" stage 2>/dev/null | head -n 1)"
+  if [[ "$STAGE_NOW" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+    GITLINE="
+- Git: stage branch \`$STAGE_NOW\`. Pushing goes only through \`bash $HELPERS/git-sync.sh push\`, after \`git-sync.sh sync\` has pulled the stage branch in; the user starts it with /laravel:sync."
+  else
+    GITLINE="
+- Git: no stage branch configured yet — /laravel:sync asks the user for it. Pushing goes only through git-sync.sh, started by the user with /laravel:sync."
+  fi
 fi
 
 TEXT="Detected stack (laravel-workflow $KIT_VERSION, auto-detected at session start — this report is the source of truth for the stack):
@@ -93,8 +106,8 @@ TEXT="Detected stack (laravel-workflow $KIT_VERSION, auto-detected at session st
 - Tests: ${TEST_RUNNER:-none}${TEST_VERSION:+ $TEST_VERSION} | Formatter: $FORMATTER | Static analysis: ${STATIC_ANALYSIS:-none}${DESIGN_SKILL:+
 - Design: the \`frontend-design\` skill is available — load it when building new UI or restyling, and not for refactors, fixes, or views that must match existing siblings.}
 - Verify commands: test=\`${CMD_TEST:-n/a}\` lint=\`${CMD_LINT:-n/a}\` analyse=\`${CMD_ANALYSE:-n/a}\` build=\`${CMD_BUILD:-n/a}\` dev=\`${CMD_DEV}\`
-- Repo map: \`bash $HELPERS/tasks.sh map\` prints models with relations, controllers with actions, routes, tables and views (cached, regenerated when files change). Read it before exploring with grep/ls.
+- Repo map: \`bash $HELPERS/tasks.sh map\` prints models with relations, controllers with actions, routes, tables and views (cached, regenerated when files change). Read it before exploring with grep/ls.$GITLINE
 
-Use these exact commands rather than inventing them. Do not add a package that is not listed here — no Livewire in a Blade+Alpine project, no spatie/laravel-permission over a hand-rolled RBAC, no Tailwind classes if Tailwind is absent. Write classes for the installed Tailwind version only; a utility from a newer minor silently emits no CSS. Never call \`env()\` outside \`config/\` — it returns null once config is cached in production.$CONTEXT$TASKS"
+Use these exact commands rather than inventing them. Do not add a package that is not listed here — no Livewire in a Blade+Alpine project, no spatie/laravel-permission over a hand-rolled RBAC, no Tailwind classes if Tailwind is absent. Write classes for the installed Tailwind version only; a utility from a newer minor silently emits no CSS. Never call \`env()\` outside \`config/\` — it returns null once config is cached in production. Code you write carries no comments — pure code; only tooling directives and type-only docblock tags are allowed.$CONTEXT$TASKS"
 
 wf_context SessionStart "$TEXT"

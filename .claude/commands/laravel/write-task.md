@@ -11,7 +11,7 @@ You are the planner. A cheaper model will implement each task you write, startin
 
 **Do not write or edit any source file.** Your only output is task files.
 
-`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, or `~/.claude/hooks` on a global install). If the tasks folder does not exist, run `bash $T init` first.
+`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, `~/.claude/hooks` on a global install, or the plugin's folder). If the tasks folder does not exist, run `bash $T init` first.
 
 ## 1. Understand — cheaply
 
@@ -82,7 +82,7 @@ Create the next task only after `new` succeeded for the previous one, so `nextid
 A short table — id, title, size, depends — then the next steps, exactly:
 
 1. Read the drafts in `.claude/tasks/` and edit anything you disagree with.
-2. `bash .claude/hooks/tasks.sh approve all` (or `approve <id>`).
-3. `/laravel:task` for one at a time, or `bash .claude/hooks/run-tasks.sh --checkpoint` for a batch with fresh context per task.
+2. In your own terminal (not through Claude — it refuses there): `bash <Kit helpers>/tasks.sh approve all` (or `approve <id>`), with the **Kit helpers** path from the session report filled in.
+3. `/laravel:task` for one at a time, or `bash <Kit helpers>/run-tasks.sh --checkpoint` for a batch with fresh context per task.
 
 Nothing else.

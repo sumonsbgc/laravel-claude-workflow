@@ -7,21 +7,21 @@ allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task, TodoWrite, Skill
 
 Task id(s): **$ARGUMENTS**
 
-`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, or `~/.claude/hooks` on a global install). This command only takes task ids. If the argument is empty or is a description instead of an id, stop and tell the user to create the task first with `/laravel:write-task <description>`.
+`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, `~/.claude/hooks` on a global install, or the plugin's folder). This command only takes task ids. If the argument is empty or is a description instead of an id, stop and tell the user to create the task first with `/laravel:write-task <description>`.
 
 `/laravel:task` sends `size: large` tasks here on its own; running `/laravel:feature <id>` directly forces the full build on a task of any size. The task-running rules in `/laravel:task` — token discipline, skill table, verification, memory — apply here too.
 
 For each id, in the order given, skipping any whose dependencies aren't done (`bash $T list` shows them):
 
-1. `bash $T start <id>` (it refuses drafts; tell the user to approve the task first), then `bash $T show <id>`. The Acceptance list is the definition of done.
+1. `bash $T start <id>` (it refuses drafts; tell the user to approve the task in their own terminal), then `bash $T show <id>`. The Acceptance list is the definition of done.
 2. Run the phases below.
-3. Delegate to `laravel-verifier` with the task id for an independent verdict, and record each round: `bash $T verdict <id> PASS|FAIL|UNVERIFIED <round>`. On `FAIL`, fix exactly what it lists and re-verify; after two failed rounds, `bash $T block <id> "<failing criteria>"` and stop. On `PASS WITH UNVERIFIED`, name the unverified criteria in the close log line.
-4. `bash $T close <id> "<one line: what was built and any decision made>"`.
+3. Delegate to `laravel-verifier` with the task id for an independent verdict, and record each round: `bash $T verdict <id> PASS|FAIL|UNVERIFIED <round>`. On `FAIL`, fix exactly what it lists and re-verify; after two failed rounds, `bash $T block <id> "<failing criteria>"` and stop. Never skip this: `close` refuses without a recorded verdict. On `PASS WITH UNVERIFIED`, name the unverified criteria in the close log line; the task then waits in `review` until the user runs `tasks.sh accept <id>`.
+4. `bash $T close <id> "<one line: what was built and any decision made>"`. Never push or open a PR — the user publishes.
 5. Add anything newly learned about the codebase to `.claude/project-context.md` (one line per fact, keep it under ~60 lines).
 
 ## Phases
 
-Each phase's output is the next phase's input. Don't run them all blindly in parallel. Skip a phase the task genuinely doesn't need (no schema change → no migration) and say so in the report.
+Every phase writes pure code: no comments of any kind (only tooling directives and type-only docblock tags), and every agent you delegate to is told so. Each phase's output is the next phase's input. Don't run them all blindly in parallel. Skip a phase the task genuinely doesn't need (no schema change → no migration) and say so in the report.
 
 ### 1. Understand (do this yourself, no subagent)
 

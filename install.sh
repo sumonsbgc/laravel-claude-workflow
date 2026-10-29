@@ -6,6 +6,13 @@
 #   ./install.sh --global          # agents/commands/skills/hooks for every project
 #   ./install.sh . --dry-run
 #   ./install.sh /path/to/app --uninstall   remove the kit's files and hook entries
+#   ./install.sh /path/to/app --stage-branch stage   the branch /laravel:sync pulls before every push
+#
+# Or install it as a Claude Code plugin instead (no files copied into the project; update with
+# `claude plugin update laravel@laravel-workflow`):
+#   claude plugin marketplace add /path/to/laravel-workflow
+#   claude plugin install laravel@laravel-workflow
+# Use one or the other in a project, not both (the plugin steps aside and says so if both exist).
 #
 # Files this kit owns are namespaced (agents/{laravel,blade}-*, commands/laravel/,
 # skills/{laravel-conventions,blade-conventions,php-conventions}, hooks/*.sh) and are
@@ -14,15 +21,18 @@
 set -euo pipefail
 
 KIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TARGET=""; GLOBAL=0; DRY=0; FORCE=0; UNINSTALL=0
+TARGET=""; GLOBAL=0; DRY=0; FORCE=0; UNINSTALL=0; STAGE_BRANCH=""; NEXT_IS_STAGE=0
 VERSION="$(cat "$KIT/VERSION" 2>/dev/null || echo dev)"
 for a in "$@"; do
+  if [ "$NEXT_IS_STAGE" = 1 ]; then STAGE_BRANCH="$a"; NEXT_IS_STAGE=0; continue; fi
   case "$a" in
+    --stage-branch) NEXT_IS_STAGE=1 ;;
+    --stage-branch=*) STAGE_BRANCH="${a#--stage-branch=}" ;;
     --global) GLOBAL=1 ;;
     --dry-run) DRY=1 ;;
     --force) FORCE=1 ;;
     --uninstall) UNINSTALL=1 ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) TARGET="$a" ;;
   esac
 done
@@ -50,7 +60,7 @@ fi
 
 # Kit-owned hook commands, matched by script name: dropped before merging (so upgrades never
 # stack duplicates) and removed on uninstall.
-KIT_HOOKS_RE='\.claude/hooks/(session-context|guard-php|guard-blade|guard-styles|guard-editor|format|post-edit|bash-guard|guard-secrets|verify|subagent-context)\.sh'
+KIT_HOOKS_RE='\.claude/hooks/(session-context|guard-php|guard-blade|guard-styles|guard-editor|format|post-edit|bash-guard|guard-secrets|guard-owner|guard-comments|push-consent|verify|subagent-context)\.sh'
 # Permission rules earlier kit versions shipped and this one deliberately removed. A union merge
 # would keep them forever, so they're dropped from the existing settings on every install.
 RETIRED='["Read(//home/**)","Bash(npm run dev:*)","Bash(npm run build:*)","Bash(vendor/bin/phpstan:*)","Bash(php artisan migrate --pretend:*)","Bash(php artisan config:clear:*)","Bash(php artisan view:clear:*)","Bash(php artisan migrate:status:*)"]'
@@ -69,7 +79,7 @@ if [ "$UNINSTALL" = 1 ]; then
   printf '\nRemoving laravel-workflow from %s\n\n' "$DEST"
   run "rm -rf '$DEST/commands/laravel' '$DEST/skills/laravel-conventions' '$DEST/skills/blade-conventions' '$DEST/skills/php-conventions'"
   run "rm -f '$DEST/agents/'laravel-*.md '$DEST/agents/'blade-*.md '$DEST/laravel-workflow.version' '$DEST/verify.playwright.config.mjs'"
-  for h in _lib stack tasks session-context guard-php guard-blade guard-styles guard-editor format post-edit bash-guard guard-secrets verify verify-browser run-tasks repo-map subagent-context; do
+  for h in _lib stack tasks session-context guard-php guard-blade guard-styles guard-editor format post-edit bash-guard guard-secrets guard-owner guard-comments guard-read allow-helpers plugin-dispatch verify verify-browser run-tasks repo-map subagent-context git-sync push-consent; do
     run "rm -f '$DEST/hooks/$h.sh'"
   done
   if [ -f "$DEST/settings.json" ] && command -v jq >/dev/null 2>&1; then
@@ -104,8 +114,8 @@ run "chmod +x '$DEST/hooks/'*.sh"
 say "agents:   $(ls "$KIT/.claude/agents" | wc -l | tr -d ' ') files"
 say "commands: /laravel:$(ls "$KIT/.claude/commands/laravel" | sed 's/\.md$//' | tr '\n' ' ' | sed 's/ /, \/laravel:/g; s/, \/laravel:$//')"
 say "skills:   laravel-conventions, blade-conventions, php-conventions (+ $(cat "$KIT/.claude/skills/"*/references/* /dev/null | wc -l | tr -d ' ') lines of references)"
-say "hooks:    session-context, post-edit (guard-php, guard-blade, guard-styles, guard-editor, format), bash-guard, guard-secrets, verify"
-say "helpers:  stack.sh (detection, cached), tasks.sh (task bookkeeping), run-tasks.sh (headless runner), verify-browser.sh"
+say "hooks:    session-context, post-edit (guard-php, guard-blade, guard-styles, guard-editor, format), bash-guard, guard-secrets, guard-owner, guard-comments, push-consent, verify"
+say "helpers:  stack.sh (detection, cached), tasks.sh (task bookkeeping), run-tasks.sh (headless runner), verify-browser.sh, git-sync.sh (stage pull + push)"
 say "version:  $VERSION"
 
 # ---- settings.json -----------------------------------------------------------
@@ -150,6 +160,15 @@ if [ "$GLOBAL" = 0 ]; then
   fi
 fi
 
+# ---- stage branch --------------------------------------------------------------
+if [ "$GLOBAL" = 0 ] && [ -n "$STAGE_BRANCH" ]; then
+  if [ "$DRY" = 1 ]; then say "[dry-run] stage branch: $STAGE_BRANCH"
+  elif ! git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then say "stage:    skipped — $TARGET is not a git repository"
+  else say "stage:    $(CLAUDE_PROJECT_DIR="$TARGET" bash "$DEST/hooks/git-sync.sh" stage "$STAGE_BRANCH" 2>&1 | tail -n 1)"; fi
+elif [ "$GLOBAL" = 0 ] && [ ! -f "$DEST/workflow.conf" ] && git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
+  say "stage:    not set — /laravel:setup or the first /laravel:sync asks (or re-run with --stage-branch <name>)"
+fi
+
 # ---- tasks folder (2.2 moved it under .claude) --------------------------------
 if [ "$GLOBAL" = 0 ] && [ -f "$TARGET/tasks/TEMPLATE.md" ] && [ ! -d "$DEST/tasks" ]; then
   say "tasks:    still in ./tasks (pre-2.2 layout, keeps working) — move it with: bash .claude/hooks/tasks.sh migrate"
@@ -181,6 +200,7 @@ Long batches — each task in a fresh session, one commit per task on its own br
     bash .claude/hooks/run-tasks.sh --checkpoint
 
 Around the work:  /laravel:test  /laravel:review  /laravel:audit  /laravel:ship
+Git:              /laravel:sync   commit + pull the stage branch + check + push, in one go
 Numbers:          bash .claude/hooks/tasks.sh stats
 
 NEXT

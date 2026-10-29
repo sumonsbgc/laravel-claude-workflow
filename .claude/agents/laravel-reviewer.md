@@ -23,7 +23,7 @@ Review the diff (`git diff`, `git diff --staged`, or the branch against its base
 6. **Caching** — a cache write with no invalidation path; a key built differently in two places; per-user data under a shared key; tags used on a driver that doesn't support them.
 7. **Performance** — N+1 in a controller or a view; `Model::all()`; an accessor that queries; an unpaginated list; a query inside a loop.
 8. **Blade** — a query in a view; `{!! !!}` on request data; `{{ }}` inside `<script>` or `x-data` where `@js()` is needed; a form without `@csrf`; a missing `@method`; inputs without `old()` or labels; interpolated Tailwind class names.
-9. **Language-level quality** (`php-conventions`) — swallowed exceptions, `catch (\Exception)` around a block, missing types, magic values that should be an enum, a helper that already exists, dead code, leftover `dd()`/`dump()`.
+9. **Language-level quality** (`php-conventions`) — swallowed exceptions, `catch (\Exception)` around a block, missing types, magic values that should be an enum, a helper that already exists, dead code, leftover `dd()`/`dump()`, and any comment the change adds (the project rule is pure code: only tooling directives and type-only docblock tags are allowed).
 
 ## Output
 
