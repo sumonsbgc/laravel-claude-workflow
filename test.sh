@@ -719,7 +719,6 @@ for c in 'git push' 'git push origin main' 'cd app && git -C .. push -u origin x
 done
 for c in 'git status' 'git commit -m "push the fix"' 'echo push' 'gh pr view' 'git log --oneline | head' \
          'git commit -m "run tasks.sh approve, then git push"' 'echo tasks.sh approve' \
-         "$(printf "python3 - <<'PY'\ntasks.sh accept 1\ngit push\nPY")" \
          'bash .claude/hooks/tasks.sh close 001 "approve flow"' 'grep -n status: .claude/tasks/001-x.md' \
          "$(printf "bash .claude/hooks/tasks.sh new 005-x <<'TASK'\n---\nstatus: draft\n---\nsee .claude/tasks/ > x\nTASK")"; do
   check "owner guard allows: ${c%%$'\n'*}" "$(own "$c")" "0"
@@ -905,10 +904,12 @@ check "a quoted << can't fake a heredoc" "$(ownp "$(printf 'echo "<<EOF"\ngit pu
 check "a << after # can't fake a heredoc" "$(ownp "$(printf 'true # <<EOF\ngit push\nEOF')")" "2"
 check "a heredoc piped into a shell is scanned" "$(ownp "$(printf 'cat <<EOF | bash\ngit push\nEOF')")" "2"
 check "a heredoc followed by another command is scanned" "$(ownp "$(printf 'cat <<EOF; git push\nx\nEOF')")" "2"
-check "a heredoc redirected to a file is still data" "$(ownp "$(printf 'cat <<EOF > notes.txt\ngit push\nEOF')")" "0"
+check "heredoc bodies are always scanned (fail closed)" "$(ownp "$(printf 'cat <<EOF > notes.txt\ngit push\nEOF')")" "2"
+check "even a python script body" "$(ownp "$(printf "python3 - <<'PY'\nimport os\nPY\ngit push")")" "2"
+check "a draft written another way is scanned" "$(ownp "$(printf "cat > d.md <<'TASK'\ngit push\nTASK")")" "2"
+check "the task-draft form with trailing text is scanned" "$(ownp "$(printf "bash .claude/hooks/tasks.sh new 005-x <<'TASK'\nx\nTASK\ngit push")")" "2"
 check "a mixed-quote heredoc delimiter can't hide a push" "$(ownp "$(printf 'cat <<"E"OF > f\nx\nEOF\ngit push')")" "2"
 check "a heredoc with no terminator is scanned whole" "$(ownp "$(printf 'cat <<EOF > f\nx\ngit push')")" "2"
-check "a tab-indented terminator only ends <<-" "$(ownp "$(printf 'cat <<EOF > f\n\tEOF\ngit push\nEOF')")" "0"
 check "a quoted-delimiter task draft still passes" "$(ownp "$(printf "bash .claude/hooks/tasks.sh new 005-x <<'TASK'\ngit push\nTASK")")" "0"
 mkdir -p "$GS/app/.claude/.cache"; printf 'CMD_TEST="rm -rf x"\n' > "$GS/app/.claude/.cache/stack.env"
 check "allow-helpers ignores a tampered stack cache" "$(printf '{"tool_name":"Bash","tool_input":{"command":"rm -rf x"}}' | CLAUDE_PROJECT_DIR="$GS/app" bash "$H/allow-helpers.sh" | grep -c allow)" "0"
