@@ -59,9 +59,7 @@ case "$CMD" in
 esac
 [[ "$CMD" == "php -l "* ]] && paths_only "${CMD#php -l }" && allow "php -l"
 
-ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
-eval "$(CLAUDE_PROJECT_DIR="$ROOT" bash "$SELF_DIR/stack.sh" 2>/dev/null | grep -E '^CMD_(TEST|LINT|ANALYSE|BUILD)=')"
-for c in "${CMD_TEST:-}" "${CMD_LINT:-}" "${CMD_ANALYSE:-}" "${CMD_BUILD:-}"; do
+for c in 'composer test' 'php artisan test' 'vendor/bin/pest' 'vendor/bin/phpunit' 'vendor/bin/pint --test' 'vendor/bin/phpstan analyse' 'npm run build'; do
   [ -n "$c" ] || continue
   [ "$CMD" = "$c" ] && allow "verify command"
   if [[ "$CMD" == "$c "* ]]; then

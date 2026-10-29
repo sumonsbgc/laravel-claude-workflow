@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.1 — 2026-10-30
+Fixes from automated security review of 2.4.0.
+- guard-owner reads a heredoc delimiter the way bash does: the whole word with its quotes removed (`<<"E"OF` is `EOF`), ended only by an exact terminator line (leading tabs only for `<<-`). With more than one heredoc, an odd delimiter, or no terminator, the whole command is scanned. Before, `cat <<"E"OF … EOF` followed by `git push` hid the push.
+- Push consent is bound to the session: push-consent.sh records the session id with the time, and guard-owner accepts it only for the same session, only if it is not in the future, and only for 30 minutes. Any shell command naming the consent file is blocked (the hook script itself, `push-consent.sh`, can still be read); before, `cd .claude/.cache && date +%s > push-consent` got through.
+- allow-helpers no longer builds its auto-approve list from the stack cache, which a shell command could rewrite. It approves only fixed verify commands (`composer test`, `php artisan test`, `vendor/bin/pest`, `vendor/bin/phpunit`, `vendor/bin/pint --test`, `vendor/bin/phpstan analyse`, `npm run build`), optionally followed by plain paths.
+
 ## 2.4.0 — 2026-10-30
 The kit installs as a Claude Code plugin, as next-workflow 2.5 does.
 - `claude plugin marketplace add /path/to/laravel-workflow` then `claude plugin install laravel@laravel-workflow`. Nothing is copied into the project; `claude plugin update` upgrades it. The plugin is named `laravel`, so the commands stay `/laravel:*`. `.claude-plugin/plugin.json` points at the existing agents, commands and skills.

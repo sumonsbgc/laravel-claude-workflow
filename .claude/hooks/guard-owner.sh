@@ -26,8 +26,13 @@ block() { echo "Blocked by laravel-workflow: $1" >&2; exit 2; }
 # A heredoc fed to anything but a shell is data (a draft for `tasks.sh new`, a script for python,
 # a file for cat), not commands: drop its body. Fed to a bare shell (`bash <<EOF`) it runs, so it stays.
 FIRST="${CMD%%$'\n'*}"
-if [[ "$FIRST" =~ \<\<-?[[:space:]]*[\"\']?([A-Za-z_][A-Za-z0-9_]*) ]] && [[ "$FIRST" != *'<<<'* ]]; then
-  TAG="${BASH_REMATCH[1]}"
+HEREDOCS="${FIRST//[^<]/ }"; HEREDOCS="$(printf '%s' "$HEREDOCS" | grep -o '<<' | wc -l | tr -d ' ')"
+if [ "$HEREDOCS" = 1 ] && [[ "$FIRST" != *'<<<'* ]] && [[ "$FIRST" =~ \<\<(-?)[[:space:]]*([^[:space:]\;\&\|\<\>\(\)]+) ]]; then
+  DASH="${BASH_REMATCH[1]}"
+  TAG="$(printf '%s' "${BASH_REMATCH[2]}" | tr -d "\"'\\\\")"
+  [[ "$TAG" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || TAG=""
+fi
+if [ -n "${TAG:-}" ]; then
   read -ra F <<<"${FIRST%%<<*}"
   k=0; while [ "$k" -lt "${#F[@]}" ] && [[ "${F[$k]}" == *=* ]]; do k=$((k + 1)); done
   RUNS=0
@@ -35,8 +40,11 @@ if [[ "$FIRST" =~ \<\<-?[[:space:]]*[\"\']?([A-Za-z_][A-Za-z0-9_]*) ]] && [[ "$F
     RUNS=1; for x in "${F[@]:$((k + 1))}"; do [[ "$x" == -* ]] || { RUNS=0; break; }; done   # `bash script.sh <<X` feeds data
   fi
   if [ "$RUNS" = 0 ]; then
-    REST="$(printf '%s\n' "$CMD" | awk -v t="$TAG" 'NR > 1 && !past { if ($0 ~ "^[[:space:]]*" t "[[:space:]]*$") past = 1; next } NR > 1 { print }')"
-    CMD="$FIRST"${REST:+$'\n'"$REST"}
+    TERMINATED="$(printf '%s\n' "$CMD" | awk -v t="$TAG" -v dash="$DASH" 'NR > 1 { l = $0; if (dash == "-") sub(/^\t+/, "", l); if (l == t) { print "yes"; exit } }')"
+    if [ "$TERMINATED" = yes ]; then
+      REST="$(printf '%s\n' "$CMD" | awk -v t="$TAG" -v dash="$DASH" 'NR > 1 && !past { l = $0; if (dash == "-") sub(/^\t+/, "", l); if (l == t) past = 1; next } NR > 1 { print }')"
+      CMD="$FIRST"${REST:+$'\n'"$REST"}
+    fi
   fi
 fi
 
@@ -48,16 +56,20 @@ if [[ "$NORM" =~ verify\.sh([^A-Za-z0-9_]|$) ]] && [[ "$NORM" == *--baseline* ]]
   block "verify.sh --baseline records the current static-analysis findings as accepted. Only the user runs it (in their own terminal, or with ! in the prompt)."
 fi
 
-if [[ "$NORM" == *cache/push-consent* ]]; then
+if [[ "$NORM" =~ push-consent([^.]|$) ]]; then
   block "the push consent is the user's: it is recorded only when they type /laravel:sync. Ask them to run it."
 fi
 
 ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 HELPERS="$(wf_helpers "$SELF_DIR")"
+SESSION="$(printf '%s' "$INPUT" | jq -r '.session_id // ""' 2>/dev/null)"
 push_allowed() {
   [ "${LARAVEL_WF_ALLOW_PUSH:-0}" = 1 ] && return 0
-  local t; t="$(cat "$ROOT/.claude/.cache/push-consent" 2>/dev/null)"
-  [[ "$t" =~ ^[0-9]+$ ]] && [ $(( $(date +%s) - t )) -lt 1800 ]
+  local when sid age
+  read -r when sid < "$ROOT/.claude/.cache/push-consent" 2>/dev/null || return 1
+  [[ "$when" =~ ^[0-9]+$ ]] && [ -n "$sid" ] && [ "$sid" = "$SESSION" ] || return 1
+  age=$(( $(date +%s) - when ))
+  [ "$age" -ge 0 ] && [ "$age" -lt 1800 ]
 }
 check_sync_push() {
   push_allowed || block "pushing is the user's call. They run /laravel:sync (it commits, pulls the stage branch, checks, then pushes), or bash $HELPERS/git-sync.sh push in their own terminal. Finish the work and tell the user it is ready."
