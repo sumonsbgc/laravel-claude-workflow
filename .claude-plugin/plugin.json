@@ -1,6 +1,6 @@
 {
   "name": "laravel",
-  "version": "2.4.2",
+  "version": "2.4.3",
   "description": "Laravel + Blade workflow: plan tasks with /laravel:write-task, build them with /laravel:task, independent verification, stack-aware guards and project memory.",
   "author": {
     "name": "Mohammad Sumon"
