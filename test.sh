@@ -908,6 +908,8 @@ check "heredoc bodies are always scanned (fail closed)" "$(ownp "$(printf 'cat <
 check "even a python script body" "$(ownp "$(printf "python3 - <<'PY'\nimport os\nPY\ngit push")")" "2"
 check "a draft written another way is scanned" "$(ownp "$(printf "cat > d.md <<'TASK'\ngit push\nTASK")")" "2"
 check "the task-draft form with trailing text is scanned" "$(ownp "$(printf "bash .claude/hooks/tasks.sh new 005-x <<'TASK'\nx\nTASK\ngit push")")" "2"
+check "a carriage return can't shift the draft terminator" "$(ownp "$(printf "bash .claude/hooks/tasks.sh new 005-x <<'T'\\r\\nT\\r\\ngit push\\nT")")" "2"
+check "a near-terminator line (trailing space) stays data, as in bash" "$(ownp "$(printf "bash .claude/hooks/tasks.sh new 005-x <<'T'\\nT \\ngit push\\nT")")" "0"
 check "a mixed-quote heredoc delimiter can't hide a push" "$(ownp "$(printf 'cat <<"E"OF > f\nx\nEOF\ngit push')")" "2"
 check "a heredoc with no terminator is scanned whole" "$(ownp "$(printf 'cat <<EOF > f\nx\ngit push')")" "2"
 check "a quoted-delimiter task draft still passes" "$(ownp "$(printf "bash .claude/hooks/tasks.sh new 005-x <<'TASK'\ngit push\nTASK")")" "0"
