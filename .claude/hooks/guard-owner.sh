@@ -32,8 +32,10 @@ if [ "$HEREDOCS" = 1 ] && [[ "$FIRST" != *'<<<'* ]] && [[ "$FIRST" =~ \<\<(-?)[[
   TAG="$(printf '%s' "${BASH_REMATCH[2]}" | tr -d "\"'\\\\")"
   [[ "$TAG" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || TAG=""
 fi
+PRE="${FIRST%%<<*}"
+[[ "$PRE" == *[\"\'\`\\#]* || "$PRE" == *'$('* ]] && TAG=""
 if [ -n "${TAG:-}" ]; then
-  read -ra F <<<"${FIRST%%<<*}"
+  read -ra F <<<"$PRE"
   k=0; while [ "$k" -lt "${#F[@]}" ] && [[ "${F[$k]}" == *=* ]]; do k=$((k + 1)); done
   RUNS=0
   if [[ "${F[$k]:-}" =~ ^(.*/)?(bash|sh|zsh|dash|ksh)$ ]]; then
@@ -56,23 +58,17 @@ if [[ "$NORM" =~ verify\.sh([^A-Za-z0-9_]|$) ]] && [[ "$NORM" == *--baseline* ]]
   block "verify.sh --baseline records the current static-analysis findings as accepted. Only the user runs it (in their own terminal, or with ! in the prompt)."
 fi
 
-if [[ "$NORM" =~ push-consent([^.]|$) ]]; then
-  block "the push consent is the user's: it is recorded only when they type /laravel:sync. Ask them to run it."
-fi
-
-ROOT="${CLAUDE_PROJECT_DIR:-$PWD}"
 HELPERS="$(wf_helpers "$SELF_DIR")"
-SESSION="$(printf '%s' "$INPUT" | jq -r '.session_id // ""' 2>/dev/null)"
 push_allowed() {
   [ "${LARAVEL_WF_ALLOW_PUSH:-0}" = 1 ] && return 0
-  local when sid age
-  read -r when sid < "$ROOT/.claude/.cache/push-consent" 2>/dev/null || return 1
-  [[ "$when" =~ ^[0-9]+$ ]] && [ -n "$sid" ] && [ "$sid" = "$SESSION" ] || return 1
-  age=$(( $(date +%s) - when ))
-  [ "$age" -ge 0 ] && [ "$age" -lt 1800 ]
+  local transcript last
+  transcript="$(printf '%s' "$INPUT" | jq -r '.transcript_path // ""' 2>/dev/null)"
+  [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
+  last="$(jq -c 'select(.type == "user" and (.isMeta | not) and (.isSidechain | not) and (.message.content | type) == "string") | .message.content' "$transcript" 2>/dev/null | tail -n 1)"
+  [[ "$last" == *'<command-name>/laravel:sync</command-name>'* ]]
 }
 check_sync_push() {
-  push_allowed || block "pushing is the user's call. They run /laravel:sync (it commits, pulls the stage branch, checks, then pushes), or bash $HELPERS/git-sync.sh push in their own terminal. Finish the work and tell the user it is ready."
+  push_allowed || block "pushing is the user's call: it runs only in the turn the user started with /laravel:sync (which commits, pulls the stage branch, checks, then pushes), or bash $HELPERS/git-sync.sh push in their own terminal. Finish the work and tell the user it is ready."
 }
 
 TASKS_DIR="${LARAVEL_WF_TASKS_DIR:-.claude/tasks}"

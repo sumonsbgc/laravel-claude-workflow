@@ -106,6 +106,7 @@ for s in laravel-conventions blade-conventions php-conventions; do
   run "cp -R '$KIT/.claude/skills/$s' '$DEST/skills/'"
 done
 run "cp '$KIT/.claude/hooks/'*.sh '$DEST/hooks/'"
+run "rm -f '$DEST/hooks/push-consent.sh'"
 run "cp '$KIT/.claude/verify.playwright.config.mjs' '$DEST/'"
 if [ "$DRY" = 0 ]; then printf '%s\n' "$VERSION" > "$DEST/laravel-workflow.version"; fi
 run "mkdir -p '$DEST/templates'"
@@ -114,7 +115,7 @@ run "chmod +x '$DEST/hooks/'*.sh"
 say "agents:   $(ls "$KIT/.claude/agents" | wc -l | tr -d ' ') files"
 say "commands: /laravel:$(ls "$KIT/.claude/commands/laravel" | sed 's/\.md$//' | tr '\n' ' ' | sed 's/ /, \/laravel:/g; s/, \/laravel:$//')"
 say "skills:   laravel-conventions, blade-conventions, php-conventions (+ $(cat "$KIT/.claude/skills/"*/references/* /dev/null | wc -l | tr -d ' ') lines of references)"
-say "hooks:    session-context, post-edit (guard-php, guard-blade, guard-styles, guard-editor, format), bash-guard, guard-secrets, guard-owner, guard-comments, push-consent, verify"
+say "hooks:    session-context, post-edit (guard-php, guard-blade, guard-styles, guard-editor, format), bash-guard, guard-secrets, guard-owner, guard-comments, verify"
 say "helpers:  stack.sh (detection, cached), tasks.sh (task bookkeeping), run-tasks.sh (headless runner), verify-browser.sh, git-sync.sh (stage pull + push)"
 say "version:  $VERSION"
 

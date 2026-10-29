@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Bash, Read, Edit, Grep, Glob, AskUserQuestion
 ---
 
-Commit the work, pull the stage branch in, check it, push. `G=<Kit helpers>/git-sync.sh`, using the **Kit helpers** path from the session report. The user typing `/laravel:sync` is their go-ahead for this push (it lasts 30 minutes); a plain `git push` stays blocked.
+Commit the work, pull the stage branch in, check it, push. `G=<Kit helpers>/git-sync.sh`, using the **Kit helpers** path from the session report. The user typing `/laravel:sync` is their go-ahead for this push, for this turn only; a plain `git push` stays blocked.
 
 ## 1. Stage branch
 

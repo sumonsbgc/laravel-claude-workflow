@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.4.2 — 2026-10-30
+Fixes from a second automated security review.
+- Push consent no longer lives in a file. Any file the hooks can read, a Bash command can write (a name built at runtime gets past a name check), so the `push-consent.sh` UserPromptSubmit hook and its token are gone. guard-owner now reads the session transcript Claude Code writes (`transcript_path` in the hook input) and allows `git-sync.sh push` only when the user's latest typed prompt is `/laravel:sync`: a non-meta, non-sidechain user entry with `<command-name>/laravel:sync</command-name>`. Tool results, sub-agent entries and plain mentions don't count, and consent ends with the user's next prompt instead of after 30 minutes. Checked against a real session transcript. Reinstalling removes the old hook file.
+- guard-owner strips a heredoc body only when the text before `<<` has no quotes, backticks, `$(`, backslash or `#`, so `echo "<<EOF"` or `true # <<EOF` can't hide the commands after it. Otherwise the whole command is scanned.
+
 ## 2.4.1 — 2026-10-30
 Fixes from automated security review of 2.4.0.
 - guard-owner reads a heredoc delimiter the way bash does: the whole word with its quotes removed (`<<"E"OF` is `EOF`), ended only by an exact terminator line (leading tabs only for `<<-`). With more than one heredoc, an odd delimiter, or no terminator, the whole command is scanned. Before, `cat <<"E"OF … EOF` followed by `git push` hid the push.

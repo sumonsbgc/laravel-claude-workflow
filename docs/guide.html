@@ -221,7 +221,7 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 /laravel:setup                                             <span class="c"># asks, suggesting stage/staging/develop</span></pre>
 <p>It's stored in <code>.claude/workflow.conf</code> (<code>STAGE_BRANCH=stage</code>, <code>SYNC_MODE=merge</code>). Commit that file so the team shares it. If it's missing, the first <code>/laravel:sync</code> asks.</p>
 </div></div>
-<p>A plain <code>git push</code> from Claude is always blocked and redirected, so no push can skip the stage pull. The git work is done by <code>git-sync.sh</code> (<code>status</code>, <code>sync</code>, <code>push</code>, <code>stage</code>, <code>candidates</code>), which you can also run in your own terminal. With the Laravel kit, a push happens only after <b>you</b> type <code>/laravel:sync</code> (that counts as your go-ahead for 30 minutes); asking in plain words commits but doesn't push.</p>
+<p>A plain <code>git push</code> from Claude is always blocked and redirected, so no push can skip the stage pull. The git work is done by <code>git-sync.sh</code> (<code>status</code>, <code>sync</code>, <code>push</code>, <code>stage</code>, <code>candidates</code>), which you can also run in your own terminal. With the Laravel kit, a push happens only after <b>you</b> type <code>/laravel:sync</code> (that counts as your go-ahead for that turn only); asking in plain words commits but doesn't push.</p>
 
 <h2>9. All commands and helpers</h2>
 <table>
