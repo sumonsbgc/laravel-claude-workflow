@@ -57,10 +57,12 @@ Claude is always blocked; `/lw:sync` commits, runs `git-sync.sh sync` (merges th
 in, stops on conflicts), checks, then `git-sync.sh push`, which refuses a branch that doesn't
 contain the stage branch's latest commit.
 
-To skip your review steps, add `REQUIRE_APPROVAL=off` to `.claude/workflow.conf`: the planner
-writes tasks as `todo`, existing drafts run without `approve`, and work with unverifiable
-`[browser]` criteria closes as `done` (noted in its log) instead of waiting for `accept`. The
-independent verifier still runs, and pushing still needs `/lw:sync`.
+To skip your review steps, start Claude Code with `LARAVEL_WF_REQUIRE_APPROVAL=off` in your
+environment: the planner writes tasks as `todo`, existing drafts run without `approve`, and work
+with unverifiable `[browser]` criteria closes as `done` (noted in its log) instead of waiting for
+`accept`. The independent verifier still runs, and pushing still needs `/lw:sync`. It is read only
+from the environment, never from a project file, because Claude can edit project files but cannot
+change the environment it was started with.
 
 ## Why it exists
 
@@ -164,7 +166,7 @@ Detection never fails loudly — an undetected value comes back empty and the ho
 ## Development
 
 ```bash
-./test.sh                      # 676 assertions against throwaway fixtures
+./test.sh                      # 691 assertions against throwaway fixtures
 ./test.sh -v                   # ...and print each one
 bash evals/run.sh --reference  # free: proves the eval checks against a real Laravel 13 app (5/5)
 bash evals/run.sh              # real agent runs (API spend) — compare evals/results/ across changes

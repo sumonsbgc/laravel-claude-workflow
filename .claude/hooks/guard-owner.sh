@@ -61,6 +61,9 @@ fi
 # Only words in command position count, so `git commit -m "then push"` or an echo that mentions
 # tasks.sh is left alone. Wrappers (sudo, env, xargs, timeout, bash script.sh, sh -c ...) keep the
 # position open for the word after them.
+refuse_approve() {
+  block "tasks.sh $1 is the user's step: they approve drafts after reading them, and accept work whose [browser] criteria nobody could check. Tell the user which task is waiting and ask them to run: bash $(wf_helpers "$SELF_DIR")/tasks.sh $1 <id>"
+}
 set -f
 while IFS= read -r SEG; do
   read -ra W <<<"$SEG"
@@ -89,7 +92,10 @@ while IFS= read -r SEG; do
       *git-sync.sh)
         [ "${W[$((i + 1))]:-}" = push ] && check_sync_push
         CP=0 ;;
-      [A-Za-z_]*=*) ;;
+      [A-Za-z_]*=*)
+        if [[ "$w" == *tasks.sh ]] && [[ "${W[$((i + 1))]:-}" =~ ^(approve|accept)$ ]] && ! wf_approval_off; then
+          refuse_approve "${W[$((i + 1))]}"
+        fi ;;
       *tasks.sh|*\$*|*\`*)
         j=$((i + 1))
         if [[ "$w" == *[\$\`]* ]]; then
@@ -97,7 +103,7 @@ while IFS= read -r SEG; do
           [ "${W[$j]:-}" = push ] && check_sync_push
         fi
         if [[ "${W[$j]:-}" =~ ^(approve|accept)$ ]] && ! wf_approval_off; then
-          block "tasks.sh ${W[$j]} is the user's step: they approve drafts after reading them, and accept work whose [browser] criteria nobody could check. Tell the user which task is waiting and ask them to run: bash $(wf_helpers "$SELF_DIR")/tasks.sh ${W[$j]} <id>"
+          refuse_approve "${W[$j]}"
         fi
         CP=0 ;;
       sudo|env|xargs|nice|timeout|nohup|script|unbuffer|setsid|stdbuf|*/env|*/script) WRAP=1 ;;   # their option values look like words: keep scanning

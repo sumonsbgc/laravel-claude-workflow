@@ -392,7 +392,7 @@ case "$CMD" in
     fi
     END="done"; [ "$VERDICT" = UNVERIFIED ] && ! wf_approval_off && END=review
     set_status "$f" "$END"; append_log "$f" "$*"
-    [ "$VERDICT" = UNVERIFIED ] && [ "$END" = done ] && append_log "$f" "closed with UNVERIFIED criteria (REQUIRE_APPROVAL=off)"
+    [ "$VERDICT" = UNVERIFIED ] && [ "$END" = done ] && append_log "$f" "closed with UNVERIFIED criteria (LARAVEL_WF_REQUIRE_APPROVAL=off)"
     # Remember what this task touched, so dependent tasks get it from `context` instead of re-reading.
     [ -n "$PATHS" ] && printf '%s\n' "$PATHS" > "$STATE/$ID.files"
     wf_metric task_close id "$ID" size "$(task_size "$f")" seconds "$SECS" files "$FILES"

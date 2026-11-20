@@ -129,13 +129,8 @@ HITS=""
 SHELL_GLOBS=1
 [[ "$NORM" =~ (^|[^A-Za-z0-9_])(cd|pushd|popd|shopt|setopt|dotglob|globdots|GLOBIGNORE|find|fd|fdfind|rg|ag|ack|grep|egrep|git|tar|rsync|zip|unzip|du|locate|xargs|awk|perl|python3?|node|php)([^A-Za-z0-9_]|$) ]] && SHELL_GLOBS=0
 [[ "$NORM" =~ (^|[[:space:]])(-name|-iname|-path|-ipath|-wholename|-regex|-g|--glob|--include|--exclude)([[:space:]=]|$) ]] && SHELL_GLOBS=0
-set -f
-for w in $NORM; do
-  case "$w" in *'*'*|*'?'*|*'['*) ;; *) continue ;; esac
-  b="${w##*/}"; W_SHELL_GLOBS="$SHELL_GLOBS"
-  if [[ "$b" == *'('* ]]; then
-    b="$(sed -E 's/[@!+?*]?\([^)]*\)?/*/g' <<<"$b")"; W_SHELL_GLOBS=0
-  fi
+glob_hits_secret() {
+  local w="$1" b="$2" W_SHELL_GLOBS="$3" cand d
   for cand in .env .env.local .env.production .env.development .env.testing id_rsa id_ed25519 id_ecdsa server.pem oauth-private.key auth.json; do
     # The two shortcuts below assume SHELL globbing. Tools with their own matchers (find -name/-path,
     # rg -g, grep --include, git pathspecs, tar/rsync filters) let `*` match dotfiles and any depth,
@@ -152,13 +147,37 @@ for w in $NORM; do
       d="${d/#\~/$HOME}"
       case "$d" in /*) ;; *) d="$HCWD/$d" ;; esac
       # shellcheck disable=SC2053
-      [[ "$cand" == $b ]] && compgen -G "$d/$cand" >/dev/null 2>&1 && { HITS="$HITS $w"; break; }
+      [[ "$cand" == $b ]] && compgen -G "$d/$cand" >/dev/null 2>&1 && return 0
       continue
     fi
     fi
     # shellcheck disable=SC2053  # $b is meant to be a pattern here
-    [[ "$cand" == $b ]] && { HITS="$HITS $w"; break; }
+    [[ "$cand" == $b ]] && return 0
   done
+  return 1
+}
+shopt -s extglob
+set -f
+for w in $NORM; do
+  case "$w" in
+    *'*'*|*'?'*|*'['*|*'@('*|*'!('*|*'+('*) ;;
+    *'('*'|'*')'*) ;;
+    *) continue ;;
+  esac
+  b="${w##*/}"
+  if [[ "$b" == *'('* ]]; then
+    OPENS="${b//[^(]/}"; CLOSES="${b//[^)]/}"
+    if [ "${#OPENS}" -ne "${#CLOSES}" ]; then
+      L="$(printf '%s' "$b" | tr -d '()|@!+?*[].^,' | tr 'A-Z' 'a-z')"
+      [[ "$L" =~ (env|pem|key|auth|id_) ]] && HITS="$HITS $w"
+      continue
+    fi
+    if glob_hits_secret "$w" "$(sed -E 's/(^|[^@!+?*])\(/\1@(/g' <<<"$b")" 0; then HITS="$HITS $w"; continue; fi
+    Q="$(sed -E 's/\([^()]*\)$//' <<<"$b")"
+    if [ -n "$Q" ] && glob_hits_secret "$w" "$Q" 0; then HITS="$HITS $w"; fi
+  elif glob_hits_secret "$w" "$b" "$SHELL_GLOBS"; then
+    HITS="$HITS $w"
+  fi
 done
 set +f
 for t in $(grep -oE '(^|[^A-Za-z0-9_])\.env(\.[A-Za-z0-9_-]+)*' <<<"$NORM" | sed -E 's/^[^.]//'); do

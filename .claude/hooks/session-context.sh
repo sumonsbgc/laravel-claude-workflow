@@ -81,7 +81,7 @@ if [ -n "$TDIR" ] && [ -d "$ROOT/$TDIR" ] && [ -x "$SELF_DIR/tasks.sh" ]; then
 - Tasks: $PARTS — \`/lw:task\` runs the next one, \`/lw:task list\` shows them all."
   if CLAUDE_PROJECT_DIR="$ROOT" wf_approval_off; then
     TASKS="$TASKS
-- Approval is off (REQUIRE_APPROVAL=off in .claude/workflow.conf): new tasks are written as todo, drafts run without \`approve\`, and UNVERIFIED work closes as done. Never stop to ask the user to approve or accept."
+- Approval is off (LARAVEL_WF_REQUIRE_APPROVAL=off in the environment): new tasks are written as todo, drafts run without \`approve\`, and UNVERIFIED work closes as done. Never stop to ask the user to approve or accept."
     [ "${DRAFT:-0}" -gt 0 ] 2>/dev/null && TASKS="${TASKS/"$DRAFT draft (awaiting approval)"/"$DRAFT draft (runnable)"}"
   fi
 fi

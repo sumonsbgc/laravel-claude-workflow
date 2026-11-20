@@ -27,9 +27,7 @@ wf_metric() {
 }
 
 wf_approval_off() {
-  local v="${LARAVEL_WF_REQUIRE_APPROVAL:-}" conf="${CLAUDE_PROJECT_DIR:-$PWD}/.claude/workflow.conf"
-  [ -z "$v" ] && [ -f "$conf" ] && v="$(sed -n 's/^REQUIRE_APPROVAL=//p' "$conf" | tail -n 1)"
-  [ "$v" = off ]
+  [ "${LARAVEL_WF_REQUIRE_APPROVAL:-}" = off ]
 }
 
 wf_helpers() {

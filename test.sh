@@ -660,6 +660,18 @@ check "jq object braces pass" "$(sec "jq 'map({id})' f.json")" "0"
 check "php -r code with braces passes" "$(sec "php -r 'foreach([1,2] as \$a){echo \$a;}'")" "0"
 check "awk program passes" "$(sec "awk '{print \$1}' f")" "0"
 
+section "v2: secrets guard — extended globs and alternation (2.6)"
+check ".@(e|x)nv (extglob alternation) is blocked" "$(sec 'cat .@(e|x)nv')" "2"
+check ".(e|x)nv (zsh alternation) is blocked" "$(sec 'cat .(e|x)nv')" "2"
+check "nested groups can't hide the name" "$(sec 'cat .*@(e|@(x|y))nv')" "2"
+check "an alternation inside the name is blocked" "$(sec 'cat @(.e|x)nv')" "2"
+check "an unbalanced group that could spell the name is blocked" "$(sec 'cat .e@(nv')" "2"
+check "+(…) repetition is blocked" "$(sec 'shopt -s extglob; cat .+(e)nv')" "2"
+check "a zsh qualifier is still blocked" "$(sec 'cat *(D)')" "2"
+check "grep alternation passes" "$(sec 'grep -E "foo(bar|baz)" app.log')" "0"
+check "a fully parenthesised regex passes" "$(sec 'grep -E "(error|warn)" app.log')" "0"
+check "commit text with (a|b) passes" "$(sec 'git commit -m "fix (a|b) handling"')" "0"
+
 section "v2: secrets guard — bounded work (a timed-out hook doesn't block)"
 S0=$(date +%s); R="$(sec 'cat .env {1..99999999}')"; S1=$(date +%s)
 check "a huge brace range can't time the guard out (and .env is still caught)" "$R" "2"
@@ -737,6 +749,9 @@ contains "$(gt show 102)" "status: done" "PASS closes to done"
 A="$TMP/noapprove"; gproj "$A"
 CLAUDE_PROJECT_DIR="$A" bash "$H/tasks.sh" init >/dev/null 2>&1
 printf 'REQUIRE_APPROVAL=off\n' >> "$A/.claude/workflow.conf"
+check "a REQUIRE_APPROVAL line in the project's workflow.conf is ignored (the guard still blocks approve)" "$(printf '{"tool_input":{"command":"bash .claude/hooks/tasks.sh approve all"}}' | env -u LARAVEL_WF_REQUIRE_APPROVAL CLAUDE_PROJECT_DIR="$A" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "2"
+lacks "$(env -u LARAVEL_WF_REQUIRE_APPROVAL CLAUDE_PROJECT_DIR="$A" bash "$H/session-context.sh")" "Approval is off" "a conf line doesn't switch approval off in the session report"
+export LARAVEL_WF_REQUIRE_APPROVAL=off
 at() { CLAUDE_PROJECT_DIR="$A" LARAVEL_WF_REQUIRE_VERDICT=on bash "$H/tasks.sh" "$@" 2>&1; }
 contains "$(printf -- '---\nid: 201\ntitle: X\nstatus: draft\n---\n## Acceptance\n- [ ] [browser] x\n' | at new 201-x)" "(todo)" "approval off: new writes a todo task"
 contains "$(at show 201)" "status: todo" "approval off: the file says todo"
@@ -751,8 +766,12 @@ contains "$(CLAUDECODE=1 at approve all </dev/null)" "approved" "approval off: a
 check "approval off: the owner guard lets approve through" "$(printf '{"tool_input":{"command":"bash .claude/hooks/tasks.sh approve all"}}' | CLAUDE_PROJECT_DIR="$A" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "0"
 check "approval off: the owner guard still blocks git push" "$(printf '{"tool_input":{"command":"git push"}}' | CLAUDE_PROJECT_DIR="$A" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "2"
 contains "$(CLAUDE_PROJECT_DIR="$A" bash "$H/session-context.sh")" "Approval is off" "approval off: the session report says so"
+unset LARAVEL_WF_REQUIRE_APPROVAL
 check "approval on elsewhere: the owner guard still blocks approve" "$(printf '{"tool_input":{"command":"bash .claude/hooks/tasks.sh approve all"}}' | CLAUDE_PROJECT_DIR="$V" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "2"
-check "LARAVEL_WF_REQUIRE_APPROVAL=off works without the conf line" "$(printf '{"tool_input":{"command":"bash .claude/hooks/tasks.sh approve all"}}' | LARAVEL_WF_REQUIRE_APPROVAL=off CLAUDE_PROJECT_DIR="$V" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "0"
+check "a script path containing = after an interpreter can't hide approve" "$(printf '{"tool_input":{"command":"bash scripts=1/tasks.sh approve all"}}' | env -u LARAVEL_WF_REQUIRE_APPROVAL CLAUDE_PROJECT_DIR="$V" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "2"
+check "...nor accept" "$(printf '{"tool_input":{"command":"sh x=y/tasks.sh accept 3"}}' | env -u LARAVEL_WF_REQUIRE_APPROVAL CLAUDE_PROJECT_DIR="$V" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "2"
+check "...but a harmless subcommand on such a path passes" "$(printf '{"tool_input":{"command":"bash scripts=1/tasks.sh list"}}' | env -u LARAVEL_WF_REQUIRE_APPROVAL CLAUDE_PROJECT_DIR="$V" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "0"
+check "LARAVEL_WF_REQUIRE_APPROVAL=off lets approve through (from the environment)" "$(printf '{"tool_input":{"command":"bash .claude/hooks/tasks.sh approve all"}}' | LARAVEL_WF_REQUIRE_APPROVAL=off CLAUDE_PROJECT_DIR="$V" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "0"
 mkt 103 Third todo "[review] it reads well"
 gt start 103 >/dev/null; echo c >> "$V/composer.json"
 gt can-skip-verify 103 >/dev/null; gt verdict 103 SKIPPED 1 >/dev/null; gt close 103 tiny >/dev/null
