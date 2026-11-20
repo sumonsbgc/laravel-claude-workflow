@@ -3,7 +3,8 @@
   "version": "2.6.0",
   "description": "Laravel + Blade workflow: plan apps and features with code (feature-blueprint) or tasks with /laravel:write-task, build them with /laravel:task, independent verification, stack-aware guards and project memory.",
   "author": {
-    "name": "Mohammad Sumon"
+    "name": "Mohammad Sumon",
+    "email": "sumonsbgc@gmail.com"
   },
   "license": "MIT",
   "repository": "https://github.com/sumonsbgc/laravel-claude-workflow",
