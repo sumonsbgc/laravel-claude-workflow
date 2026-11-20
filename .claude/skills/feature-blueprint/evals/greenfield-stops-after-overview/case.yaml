@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: greenfield-stops-after-overview
+expected_outcome: |
+  A greenfield app plan that stops after stage 1: an overview with goals, non-goals, roles, ADRs, a feature list, a Mermaid dependency graph, parallel waves and risks, plus an index, and no per-feature layer files yet. It asks at most three questions or records assumptions, and tells the user to approve before layer files are written.

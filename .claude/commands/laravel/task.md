@@ -13,6 +13,7 @@ Argument: **$ARGUMENTS**
 |---|---|
 | *blank* | `bash $T next` → run that one task |
 | `<id>` | `bash $T path <id>` → run that task |
+| `<feature>` or `<feature> <layer>` | a plan-backed task, found by feature name: `bash $T list`, filtered on the feature slug and the layer name or number (`/laravel:task invoicing model`, `/laravel:task invoicing 02`). One match: run it as `<id>`. Several matches: show them and ask which. A bare feature name runs that feature's runnable tasks in layer order, under **Batch mode**. |
 | `<id> headless` | run that task with **no user present** (started by `run-tasks.sh`). Never ask a question: where you would ask, `bash $T block <id> "<the question>"` and stop. |
 | `all` | see **Batch mode**. |
 | `list` | `bash $T list` and report it. Nothing else. |
@@ -59,7 +60,7 @@ Load the reference, not the whole skill, when the reference is what you need.
 ## Running one task
 
 1. **Claim it.** `bash $T start <id>`. If it refuses because the task is a `draft`, stop and tell the user to review it and run `bash $T approve <id>` **in their own terminal**. Drafts are unreviewed plans; approving one is never your step (it refuses inside Claude Code).
-2. **Read it.** `bash $T context <id>` (the task plus its dependencies' handoff). The Acceptance list is the definition of done — you will check each item at the end.
+2. **Read it.** `bash $T context <id>` (the task plus its dependencies' handoff). The Acceptance list is the definition of done — you will check each item at the end. If the frontmatter has a `plan:` line, this task is one layer of a feature blueprint: read that file, and the `README.md` beside it for the contract. The code in the layer file is the spec: implement it as written, adapt only where the repository's conventions or existing code require it, and log each deviation in the close line. This is the one exception to reading only the task file.
 3. **Orient, cheaply.** From the project context you should already know where things go. If something genuinely isn't recorded there, find it with one targeted grep and read at most one existing analogue — then add what you learned to the context file at the end.
 4. **Decide the shape before writing.** The files you will touch, the route and its authorization, what the data layer must expose, what the view is given. Views render; controllers stay thin; the operation lives in a service or action.
 5. **Implement.** Every `[test]` criterion needs a Pest/PHPUnit test that asserts it, because the verifier will look for it. Follow the conventions; the PostToolUse guards will tell you immediately if you break an escaping, mass-assignment, `env()`, N+1 or Tailwind rule — fix what they report rather than arguing with them.
@@ -82,6 +83,7 @@ Proceed under a stated assumption and log it. (Headless: never ask, block with t
 The task's `size:` field decides first — it was set by the planner (`/laravel:write-task`), which saw the whole request:
 
 - **`size: large`** → read `.claude/commands/laravel/feature.md` (`~/.claude/commands/laravel/feature.md` on a global install) and run its **Phases** section for this task, delegating each phase. Do the claim/close/memory steps from this file as usual. Read that file only for large tasks — it is not needed otherwise.
+- **A task with `plan:`** is one layer of a feature, so route it by the layer name and give the agent the layer file path as its spec: `Migration`, `Model` and `Service` → `laravel-data-layer`; `API_Contract` and `Controller` → `laravel-route-builder`; `View` → `blade-ui-builder`; `Jobs_Events` → `laravel-data-layer`; `Test` → `laravel-test-writer`; `Security` → `laravel-reviewer` for the audit, then fix what it confirms; `Performance` → `laravel-perf-auditor`; `Verify`, `Rollout` and `Observability` → do it yourself, run the commands in the file and record the results in the close line.
 - **`size: small`, or no size** → judge from the task itself:
   - **One or two files, one layer** (a view, a style fix, a copy change, a validation rule) → **do it yourself**. No subagents. This is most tasks.
   - **One layer, but with its own conventions** (only the schema and queries; only tests) → delegate to that **one** agent: `laravel-data-layer`, `laravel-route-builder`, `blade-ui-builder`, or `laravel-test-writer`.

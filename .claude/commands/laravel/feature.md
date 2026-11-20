@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task, TodoWrite, Skill
 
 Task id(s): **$ARGUMENTS**
 
-`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, `~/.claude/hooks` on a global install, or the plugin's folder). This command only takes task ids. If the argument is empty or is a description instead of an id, stop and tell the user to create the task first with `/laravel:write-task <description>`.
+`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, `~/.claude/hooks` on a global install, or the plugin's folder). This command takes task ids, or the slug of a planned feature (`/laravel:feature invoicing`), which expands to that feature's task ids in layer order (`bash $T list`, filtered on the slug). If the argument is empty or is a description instead of an id or a known feature, stop and tell the user to plan it first with `/laravel:write-task <description>`, which uses the `feature-blueprint` skill to write the plan and one task per layer file.
 
 `/laravel:task` sends `size: large` tasks here on its own; running `/laravel:feature <id>` directly forces the full build on a task of any size. The task-running rules in `/laravel:task` — token discipline, skill table, verification, memory — apply here too.
 
@@ -25,7 +25,7 @@ Every phase writes pure code: no comments of any kind (only tooling directives a
 
 ### 1. Understand (do this yourself, no subagent)
 
-Use the stack report and project context already in your context. Find and read the closest existing analogue in this repo — a similar route, its controller, its FormRequest, its views, its tests. Establish: where files go, the naming and layout conventions, how authorization is expressed here, how caches are invalidated, what the data layer looks like.
+If the task has a `plan:` line, read that layer file and the feature `README.md` contract first and hand the layer file code to each delegated agent as its spec; the analogue search below then only confirms conventions. Use the stack report and project context already in your context. Find and read the closest existing analogue in this repo — a similar route, its controller, its FormRequest, its views, its tests. Establish: where files go, the naming and layout conventions, how authorization is expressed here, how caches are invalidated, what the data layer looks like.
 
 Then write a short plan: the URLs, the schema change (if any), the data read and written, who is allowed to do what, the screens, and the files you'll create. The task's Notes hold decisions already made — follow them. Ask only if the task is still ambiguous in a way that changes the design (who can see it, what happens on failure): one message, specific questions, before writing code.
 

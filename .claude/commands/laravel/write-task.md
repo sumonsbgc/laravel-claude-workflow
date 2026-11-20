@@ -2,16 +2,50 @@
 description: Turn a request into one or more task files in .claude/tasks/ — goal, acceptance, size, dependencies. Plans only; never implements.
 argument-hint: <what you want built, in plain words>
 model: opus
-allowed-tools: Read, Write, Grep, Glob, Bash
+allowed-tools: Read, Write, Grep, Glob, Bash, Skill, Task
 ---
 
 Request: **$ARGUMENTS**
 
 You are the planner. A cheaper model will implement each task you write, starting cold with only the task file and `.claude/project-context.md`. The quality of everything downstream is decided here — a vague task gets a vague implementation.
 
-**Do not write or edit any source file.** Your only output is task files.
+**Do not write or edit any source file.** Your only output is task files, and plan files under `.claude/plans/` when the blueprint path applies.
 
 `T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, `~/.claude/hooks` on a global install, or the plugin's folder). If the tasks folder does not exist, run `bash $T init` first.
+
+## 0. Pick the path
+
+- **A whole application, or a feature that spans layers** (anything you would size `large`, or that needs a schema, model, routes, views and tests): load the **`feature-blueprint`** skill and follow it. It plans in two stages and writes a plan folder under `.claude/plans/`, one folder per feature and one file per layer (BRD, migration, model, service, API contract, controller, view, jobs and events, test, security, performance, verify, rollout), each carrying the complete code. Then continue with **Plan-backed tasks** below instead of sections 3 to 5.
+  - **Stage 1:** recon (`_recon.md`) for an existing app, at most three questions, then the overview and index (or the feature split and contract). **Stop and wait for the user's go** before writing any layer file.
+  - **Stage 2:** after the go, write the layer files (one `laravel-architect` agent per feature, in parallel within a wave, foundation first and alone), then the consistency pass, then the tasks below.
+- **A small single-layer change** (a view tweak, a copy change, one validation rule, one route): skip the blueprint and use sections 1 to 5 as written.
+
+### Plan-backed tasks
+
+After stage 2, turn **each layer file into one draft task** so `/laravel:task` can run it one at a time. `01-BRD` is the reference for the others, not a task. For every other layer file that exists, in number order:
+
+- `id="$(bash $T nextid)"`, then `bash $T new <id>-<feature>-<layer> <<'TASK'` … `TASK`, in the usual shape plus one extra frontmatter line, `plan:`, holding the layer file path:
+
+```
+---
+id: <id>
+title: <feature-slug> · <NN> <Layer>
+status: draft
+depends: <previous layer's task id, plus ids of other features this one needs>
+size: small
+plan: .claude/plans/<NN-feature>/<NN-Layer>.md
+---
+
+## Goal
+## Acceptance
+## Notes
+```
+
+- **Goal** — what the layer delivers, one or two sentences.
+- **Acceptance** — the layer file's *Definition of done* and the acceptance criteria of its tasks, each tagged `[test]`, `[browser]` or `[review]`, plus `[test]` for each BR-xx requirement the layer covers.
+- **Notes** — "Implement exactly what `<plan path>` specifies: the code in that file is the spec, task by task (F<feature>.<layer>.<task>), each with its own Verify command. Read the feature `README.md` in the same folder for the contract. If the code conflicts with the repository, follow the repository's conventions and record each deviation in the close line." Add deploy steps and an **Out of scope** line.
+
+Titles start with the feature slug so one feature's tasks can be found with `bash $T list | grep <feature>`. Create tasks one at a time so `nextid` advances. Finish by filling the layer-to-task-id table in the feature's `README.md`.
 
 ## 1. Understand — cheaply
 
@@ -79,7 +113,7 @@ Create the next task only after `new` succeeded for the previous one, so `nextid
 
 ## Report
 
-A short table — id, title, size, depends — then the next steps, exactly:
+A short table — id, title, size, depends (for a plan, also the plan folder and a one-line developer split) — then the next steps, exactly:
 
 1. Read the drafts in `.claude/tasks/` and edit anything you disagree with.
 2. In your own terminal (not through Claude — it refuses there): `bash <Kit helpers>/tasks.sh approve all` (or `approve <id>`), with the **Kit helpers** path from the session report filled in.

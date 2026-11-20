@@ -70,12 +70,12 @@ hook_rc() { echo "{\"tool_input\":{\"file_path\":\"$2\"}}" | CLAUDE_PROJECT_DIR=
 section "kit layout"
 for f in install.sh test.sh README.md .claude/settings.json \
          .claude/hooks/{stack,session-context,tasks,format,verify,guard-php,guard-blade,guard-styles}.sh \
-         .claude/skills/{laravel-conventions,blade-conventions,php-conventions}/SKILL.md \
+         .claude/skills/{laravel-conventions,blade-conventions,php-conventions,feature-blueprint}/SKILL.md \
          templates/{task,tasks-readme,project-context}.md; do
   [ -f "$KIT/$f" ] && ok "exists: $f" || bad "missing: $f"
 done
-check "8 agents" "$(ls "$KIT/.claude/agents" | wc -l | tr -d ' ')" "8"
-check "9 commands" "$(ls "$KIT/.claude/commands/laravel" | wc -l | tr -d ' ')" "9"
+check "9 agents" "$(ls "$KIT/.claude/agents" | wc -l | tr -d ' ')" "9"
+check "10 commands" "$(ls "$KIT/.claude/commands/laravel" | wc -l | tr -d ' ')" "10"
 for h in "$KIT"/.claude/hooks/*.sh; do
   [ -x "$h" ] && ok "executable: $(basename "$h")" || bad "not executable: $(basename "$h")"
   bash -n "$h" 2>/dev/null && ok "parses: $(basename "$h")" || bad "syntax error: $(basename "$h")"
@@ -291,9 +291,9 @@ contains "$OUT" "/laravel:task" "reports the installed commands"
 OUT="$(bash "$KIT/install.sh" "$EMPTY" 2>&1)"; RC=$?
 check "refuses a non-Laravel target" "$RC" "1"
 OUT="$(bash "$KIT/install.sh" "$P" 2>&1)"
-check "installs 8 agents" "$(ls "$P/.claude/agents" | wc -l | tr -d ' ')" "8"
-check "installs 9 commands" "$(ls "$P/.claude/commands/laravel" | wc -l | tr -d ' ')" "9"
-check "installs 3 skills" "$(ls "$P/.claude/skills" | wc -l | tr -d ' ')" "3"
+check "installs 9 agents" "$(ls "$P/.claude/agents" | wc -l | tr -d ' ')" "9"
+check "installs 10 commands" "$(ls "$P/.claude/commands/laravel" | wc -l | tr -d ' ')" "10"
+check "installs 4 skills" "$(ls "$P/.claude/skills" | wc -l | tr -d ' ')" "4"
 [ -x "$P/.claude/hooks/stack.sh" ] && ok "hooks are executable after install" || bad "hooks not executable after install"
 grep -q '.claude/.cache/' "$P/.gitignore" && ok "adds .claude/.cache/ to .gitignore" || bad "did not update .gitignore"
 if command -v jq >/dev/null 2>&1; then
@@ -877,7 +877,7 @@ printf '<?php\nclass C {}\n' > "$CG/app/C.php"
 O="$(jq -n --arg f "$CG/app/C.php" --arg c "<?php${NL}// make it${NL}class C {}" '{tool_name:"Write",tool_input:{file_path:$f,content:$c}}' | CLAUDE_PROJECT_DIR="$CG" bash "$H/guard-comments.sh" 2>&1)"
 contains "$O" "// make it" "a Write that adds a comment is blocked and names the line"
 contains "$(cat "$KIT/.claude/settings.json")" "guard-comments.sh" "the comment guard runs before Edit/Write"
-for f in laravel-route-builder laravel-data-layer blade-ui-builder laravel-test-writer; do
+for f in laravel-route-builder laravel-data-layer blade-ui-builder laravel-test-writer laravel-architect; do
   contains "$(cat "$KIT/.claude/agents/$f.md")" "No comments — pure code" "$f is told: no comments"
 done
 contains "$(cat "$KIT/.claude/commands/laravel/task.md")" "No comments — pure code" "the task runner is told: no comments"

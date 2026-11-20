@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: feature-in-existing-app
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  A coupons feature folder planned against the real code: a recon file naming the real Order model, OrderService, OrderPolicy and orders table, a feature README contract, layer files numbered 01 to 13 as they apply with the skipped ones recorded, tasks in the F-id format with full comment-free code, and a BRD with numbered BR requirements traced to tests.

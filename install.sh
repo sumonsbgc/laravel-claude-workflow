@@ -15,7 +15,7 @@
 # Use one or the other in a project, not both (the plugin steps aside and says so if both exist).
 #
 # Files this kit owns are namespaced (agents/{laravel,blade}-*, commands/laravel/,
-# skills/{laravel-conventions,blade-conventions,php-conventions}, hooks/*.sh) and are
+# skills/{laravel-conventions,blade-conventions,php-conventions,feature-blueprint}, hooks/*.sh) and are
 # overwritten on reinstall. Nothing else is touched; an existing settings.json is merged,
 # not replaced, and backed up first.
 set -euo pipefail
@@ -77,7 +77,7 @@ strip_kit() { # stdin settings JSON -> without the kit's hook entries and retire
 
 if [ "$UNINSTALL" = 1 ]; then
   printf '\nRemoving laravel-workflow from %s\n\n' "$DEST"
-  run "rm -rf '$DEST/commands/laravel' '$DEST/skills/laravel-conventions' '$DEST/skills/blade-conventions' '$DEST/skills/php-conventions'"
+  run "rm -rf '$DEST/commands/laravel' '$DEST/skills/laravel-conventions' '$DEST/skills/blade-conventions' '$DEST/skills/php-conventions' '$DEST/skills/feature-blueprint'"
   run "rm -f '$DEST/agents/'laravel-*.md '$DEST/agents/'blade-*.md '$DEST/laravel-workflow.version' '$DEST/verify.playwright.config.mjs'"
   for h in _lib stack tasks session-context guard-php guard-blade guard-styles guard-editor format post-edit bash-guard guard-secrets guard-owner guard-comments guard-read allow-helpers plugin-dispatch verify verify-browser run-tasks repo-map subagent-context git-sync push-consent; do
     run "rm -f '$DEST/hooks/$h.sh'"
@@ -101,7 +101,7 @@ run "mkdir -p '$DEST/agents' '$DEST/commands' '$DEST/skills' '$DEST/hooks'"
 run "cp '$KIT/.claude/agents/'laravel-*.md '$KIT/.claude/agents/'blade-*.md '$DEST/agents/'"
 run "rm -rf '$DEST/commands/laravel'"
 run "cp -R '$KIT/.claude/commands/laravel' '$DEST/commands/'"
-for s in laravel-conventions blade-conventions php-conventions; do
+for s in laravel-conventions blade-conventions php-conventions feature-blueprint; do
   run "rm -rf '$DEST/skills/$s'"
   run "cp -R '$KIT/.claude/skills/$s' '$DEST/skills/'"
 done
@@ -114,7 +114,7 @@ run "cp '$KIT/templates/'*.md '$DEST/templates/'"
 run "chmod +x '$DEST/hooks/'*.sh"
 say "agents:   $(ls "$KIT/.claude/agents" | wc -l | tr -d ' ') files"
 say "commands: /laravel:$(ls "$KIT/.claude/commands/laravel" | sed 's/\.md$//' | tr '\n' ' ' | sed 's/ /, \/laravel:/g; s/, \/laravel:$//')"
-say "skills:   laravel-conventions, blade-conventions, php-conventions (+ $(cat "$KIT/.claude/skills/"*/references/* /dev/null | wc -l | tr -d ' ') lines of references)"
+say "skills:   laravel-conventions, blade-conventions, php-conventions, feature-blueprint (+ $(cat "$KIT/.claude/skills/"*/references/* /dev/null | wc -l | tr -d ' ') lines of references)"
 say "hooks:    session-context, post-edit (guard-php, guard-blade, guard-styles, guard-editor, format), bash-guard, guard-secrets, guard-owner, guard-comments, verify"
 say "helpers:  stack.sh (detection, cached), tasks.sh (task bookkeeping), run-tasks.sh (headless runner), verify-browser.sh, git-sync.sh (stage pull + push)"
 say "version:  $VERSION"

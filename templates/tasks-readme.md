@@ -42,6 +42,25 @@ six views is really four tasks, and it will be implemented better as four.
 Only files with YAML frontmatter (a first line of `---`) are treated as tasks. Plans, notes and
 scratch files can live in this folder and will be ignored by the runner.
 
+## Plans for whole features and apps
+
+For a whole application, or a feature that spans layers, `/laravel:write-task` uses the
+`feature-blueprint` skill: it writes a plan folder in `.claude/plans/<NN-feature>/` (BRD, migration,
+model, service, controller, view, test, verify, security, performance, each with its full code),
+then one draft task per layer file, titled `<feature> · <NN> <Layer>`, with `plan:` pointing at the
+layer file and `depends:` chaining the layers in order. Progress per wave: `/laravel:plan-status`.
+
+```
+/laravel:task invoicing model     run one layer of a feature (finds it by feature and layer name)
+/laravel:task invoicing 02        the same, by layer number
+/laravel:task invoicing           the feature runnable layers in order (3 at most per session)
+/laravel:task 014                 any task by id
+/laravel:feature invoicing        the full phased build for every task of a feature
+```
+
+Layers of one feature can be given to different developers or runs: they only wait on their
+`depends:`. Tasks live in `.claude/tasks/`, plans in `.claude/plans/`; the runner reads only the former.
+
 ## What the runner does
 
 1. Reads the task and the project context (not the whole codebase).

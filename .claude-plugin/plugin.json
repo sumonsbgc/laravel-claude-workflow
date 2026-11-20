@@ -1,7 +1,7 @@
 {
   "name": "laravel",
-  "version": "2.5.0",
-  "description": "Laravel + Blade workflow: plan tasks with /laravel:write-task, build them with /laravel:task, independent verification, stack-aware guards and project memory.",
+  "version": "2.6.0",
+  "description": "Laravel + Blade workflow: plan apps and features with code (feature-blueprint) or tasks with /laravel:write-task, build them with /laravel:task, independent verification, stack-aware guards and project memory.",
   "author": {
     "name": "Mohammad Sumon"
   },
@@ -10,12 +10,15 @@
     "php",
     "blade",
     "workflow",
-    "tasks"
+    "tasks",
+    "planning",
+    "blueprint"
   ],
   "commands": "./.claude/commands/laravel/",
   "agents": [
     "./.claude/agents/blade-a11y-auditor.md",
     "./.claude/agents/blade-ui-builder.md",
+    "./.claude/agents/laravel-architect.md",
     "./.claude/agents/laravel-data-layer.md",
     "./.claude/agents/laravel-perf-auditor.md",
     "./.claude/agents/laravel-reviewer.md",
