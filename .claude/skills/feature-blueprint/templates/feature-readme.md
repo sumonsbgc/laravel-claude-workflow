@@ -33,4 +33,4 @@ Purpose: one sentence.
 ## Layer files and tasks
 | File | Tasks | Runner task id |
 |---|---|---|
-| 02-Migration.md | F<NN>.02.01 … | filled in by /laravel:write-task |
+| 02-Migration.md | F<NN>.02.01 … | filled in by /lw:write-task |

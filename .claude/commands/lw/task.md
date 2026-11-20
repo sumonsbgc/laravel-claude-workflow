@@ -13,7 +13,7 @@ Argument: **$ARGUMENTS**
 |---|---|
 | *blank* | `bash $T next` → run that one task |
 | `<id>` | `bash $T path <id>` → run that task |
-| `<feature>` or `<feature> <layer>` | a plan-backed task, found by feature name: `bash $T list`, filtered on the feature slug and the layer name or number (`/laravel:task invoicing model`, `/laravel:task invoicing 02`). One match: run it as `<id>`. Several matches: show them and ask which. A bare feature name runs that feature's runnable tasks in layer order, under **Batch mode**. |
+| `<feature>` or `<feature> <layer>` | a plan-backed task, found by feature name: `bash $T list`, filtered on the feature slug and the layer name or number (`/lw:task invoicing model`, `/lw:task invoicing 02`). One match: run it as `<id>`. Several matches: show them and ask which. A bare feature name runs that feature's runnable tasks in layer order, under **Batch mode**. |
 | `<id> headless` | run that task with **no user present** (started by `run-tasks.sh`). Never ask a question: where you would ask, `bash $T block <id> "<the question>"` and stop. |
 | `all` | see **Batch mode**. |
 | `list` | `bash $T list` and report it. Nothing else. |
@@ -80,9 +80,9 @@ Proceed under a stated assumption and log it. (Headless: never ask, block with t
 
 ## Routing
 
-The task's `size:` field decides first — it was set by the planner (`/laravel:write-task`), which saw the whole request:
+The task's `size:` field decides first — it was set by the planner (`/lw:write-task`), which saw the whole request:
 
-- **`size: large`** → read `.claude/commands/laravel/feature.md` (`~/.claude/commands/laravel/feature.md` on a global install) and run its **Phases** section for this task, delegating each phase. Do the claim/close/memory steps from this file as usual. Read that file only for large tasks — it is not needed otherwise.
+- **`size: large`** → read `.claude/commands/lw/feature.md` (`~/.claude/commands/lw/feature.md` on a global install) and run its **Phases** section for this task, delegating each phase. Do the claim/close/memory steps from this file as usual. Read that file only for large tasks — it is not needed otherwise.
 - **A task with `plan:`** is one layer of a feature, so route it by the layer name and give the agent the layer file path as its spec: `Migration`, `Model` and `Service` → `laravel-data-layer`; `API_Contract` and `Controller` → `laravel-route-builder`; `View` → `blade-ui-builder`; `Jobs_Events` → `laravel-data-layer`; `Test` → `laravel-test-writer`; `Security` → `laravel-reviewer` for the audit, then fix what it confirms; `Performance` → `laravel-perf-auditor`; `Verify`, `Rollout` and `Observability` → do it yourself, run the commands in the file and record the results in the close line.
 - **`size: small`, or no size** → judge from the task itself:
   - **One or two files, one layer** (a view, a style fix, a copy change, a validation rule) → **do it yourself**. No subagents. This is most tasks.

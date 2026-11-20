@@ -17,7 +17,7 @@ registered_by_project() {
 if [ "$ROOT/.claude/hooks" != "$SELF_DIR" ] && [ -f "$ROOT/.claude/hooks/$NAME.sh" ] && registered_by_project; then
   if [ "$NAME" = session-context ]; then
     . "$SELF_DIR/_lib.sh"
-    wf_context SessionStart "laravel-workflow is installed twice in this project: as a plugin and as project files (.claude/hooks, .claude/commands/laravel, .claude/agents/laravel-* and blade-*). The project files are in use. Ask the user to keep one: remove the project files with install.sh --uninstall, or disable the plugin."
+    wf_context SessionStart "laravel-workflow is installed twice in this project: as a plugin and as project files (.claude/hooks, .claude/commands/lw, .claude/agents/laravel-* and blade-*). The project files are in use. Ask the user to keep one: remove the project files with install.sh --uninstall, or disable the plugin."
   fi
   exit 0
 fi

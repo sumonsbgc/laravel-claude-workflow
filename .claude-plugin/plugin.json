@@ -1,7 +1,7 @@
 {
-  "name": "laravel",
+  "name": "lw",
   "version": "2.6.0",
-  "description": "Laravel + Blade workflow: plan apps and features with code (feature-blueprint) or tasks with /laravel:write-task, build them with /laravel:task, independent verification, stack-aware guards and project memory.",
+  "description": "Laravel + Blade workflow: plan apps and features with code (feature-blueprint) or tasks with /lw:write-task, build them with /lw:task, independent verification, stack-aware guards and project memory.",
   "author": {
     "name": "Mohammad Sumon",
     "email": "sumonsbgc@gmail.com"
@@ -19,7 +19,7 @@
     "planning",
     "blueprint"
   ],
-  "commands": "./.claude/commands/laravel/",
+  "commands": "./.claude/commands/lw/",
   "agents": [
     "./.claude/agents/blade-a11y-auditor.md",
     "./.claude/agents/blade-ui-builder.md",

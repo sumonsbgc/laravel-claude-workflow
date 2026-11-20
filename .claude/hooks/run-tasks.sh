@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run tasks one per fresh Claude session, so no task inherits the previous one's context.
-# Each run is `claude -p "/laravel:task <id> headless"`; what a task learns reaches the next one
+# Each run is `claude -p "/lw:task <id> headless"`; what a task learns reaches the next one
 # through .claude/project-context.md, exactly as across normal sessions.
 #
 #   bash .claude/hooks/run-tasks.sh                     every runnable task, in dependency order
@@ -83,7 +83,7 @@ while :; do
   LAST="$ID"
 
   printf '\n▶ task %s — %s\n' "$ID" "$(task_field "$P" title)"
-  ARGS=(-p "/laravel:task $ID headless" --output-format json --permission-mode "$PMODE")
+  ARGS=(-p "/lw:task $ID headless" --output-format json --permission-mode "$PMODE")
   [ -n "$BUDGET" ] && ARGS+=(--max-budget-usd "$BUDGET")
   if [ "$DRY" = 1 ]; then echo "  [dry-run] claude ${ARGS[*]}"; N=$((N+1)); continue; fi
 

@@ -13,6 +13,6 @@ Feature filter: **$ARGUMENTS** (blank means every feature)
 2. Read `.claude/plans/00-Overview.md` for the **Parallel waves** table, and each feature's `README.md` only if the table is missing, to place features in waves. When there is no overview (a single feature), treat it as one wave.
 3. Report, wave by wave, a table per feature: layer, task id, status, depends. Show a count line per feature (`done / total`).
 4. Then list: **blocked** tasks with the reason from the log, tasks in **review** with what the user must check and the `accept` command to run in their own terminal, **drafts** waiting for `approve` (the command to run in their own terminal), and the **next runnable** tasks (`bash $T next` for the first; the others are those whose `depends:` are all done), grouped by wave so work can be handed out in parallel.
-5. If a plan file exists with no matching task, say so and suggest `/laravel:write-task` on that plan.
+5. If a plan file exists with no matching task, say so and suggest `/lw:write-task` on that plan.
 
 Never edit statuses. Keep the whole report under 60 lines.

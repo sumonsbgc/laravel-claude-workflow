@@ -46,10 +46,10 @@ push_allowed() {
   transcript="$(printf '%s' "$INPUT" | jq -r '.transcript_path // ""' 2>/dev/null)"
   [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
   last="$(jq -c 'select(.type == "user" and (.isMeta | not) and (.isSidechain | not) and (.message.content | type) == "string") | .message.content' "$transcript" 2>/dev/null | tail -n 1)"
-  [[ "$last" == *'<command-name>/laravel:sync</command-name>'* ]]
+  [[ "$last" == *'<command-name>/lw:sync</command-name>'* ]]
 }
 check_sync_push() {
-  push_allowed || block "pushing is the user's call: it runs only in the turn the user started with /laravel:sync (which commits, pulls the stage branch, checks, then pushes), or bash $HELPERS/git-sync.sh push in their own terminal. Finish the work and tell the user it is ready."
+  push_allowed || block "pushing is the user's call: it runs only in the turn the user started with /lw:sync (which commits, pulls the stage branch, checks, then pushes), or bash $HELPERS/git-sync.sh push in their own terminal. Finish the work and tell the user it is ready."
 }
 
 TASKS_DIR="${LARAVEL_WF_TASKS_DIR:-.claude/tasks}"
@@ -78,7 +78,7 @@ while IFS= read -r SEG; do
           esac
         done
         if [ "${W[$j]:-}" = push ]; then
-          block "plain git push skips the stage-branch pull. Push only through the kit: bash $HELPERS/git-sync.sh push (it refuses until the branch contains the stage branch; run git-sync.sh sync first). Without /laravel:sync from the user, pushing is their call."
+          block "plain git push skips the stage-branch pull. Push only through the kit: bash $HELPERS/git-sync.sh push (it refuses until the branch contains the stage branch; run git-sync.sh sync first). Without /lw:sync from the user, pushing is their call."
         fi
         CP=0 ;;
       gh|*/gh)

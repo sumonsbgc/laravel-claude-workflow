@@ -6,15 +6,15 @@
 #   ./install.sh --global          # agents/commands/skills/hooks for every project
 #   ./install.sh . --dry-run
 #   ./install.sh /path/to/app --uninstall   remove the kit's files and hook entries
-#   ./install.sh /path/to/app --stage-branch stage   the branch /laravel:sync pulls before every push
+#   ./install.sh /path/to/app --stage-branch stage   the branch /lw:sync pulls before every push
 #
 # Or install it as a Claude Code plugin instead (no files copied into the project; update with
-# `claude plugin update laravel@laravel-workflow`):
+# `claude plugin update lw@laravel-workflow`):
 #   claude plugin marketplace add /path/to/laravel-workflow
-#   claude plugin install laravel@laravel-workflow
+#   claude plugin install lw@laravel-workflow
 # Use one or the other in a project, not both (the plugin steps aside and says so if both exist).
 #
-# Files this kit owns are namespaced (agents/{laravel,blade}-*, commands/laravel/,
+# Files this kit owns are namespaced (agents/{laravel,blade}-*, commands/lw/,
 # skills/{laravel-conventions,blade-conventions,php-conventions,feature-blueprint}, hooks/*.sh) and are
 # overwritten on reinstall. Nothing else is touched; an existing settings.json is merged,
 # not replaced, and backed up first.
@@ -77,7 +77,7 @@ strip_kit() { # stdin settings JSON -> without the kit's hook entries and retire
 
 if [ "$UNINSTALL" = 1 ]; then
   printf '\nRemoving laravel-workflow from %s\n\n' "$DEST"
-  run "rm -rf '$DEST/commands/laravel' '$DEST/skills/laravel-conventions' '$DEST/skills/blade-conventions' '$DEST/skills/php-conventions' '$DEST/skills/feature-blueprint'"
+  run "rm -rf '$DEST/commands/lw' '$DEST/commands/laravel' '$DEST/skills/laravel-conventions' '$DEST/skills/blade-conventions' '$DEST/skills/php-conventions' '$DEST/skills/feature-blueprint'"
   run "rm -f '$DEST/agents/'laravel-*.md '$DEST/agents/'blade-*.md '$DEST/laravel-workflow.version' '$DEST/verify.playwright.config.mjs'"
   for h in _lib stack tasks session-context guard-php guard-blade guard-styles guard-editor format post-edit bash-guard guard-secrets guard-owner guard-comments guard-read allow-helpers plugin-dispatch verify verify-browser run-tasks repo-map subagent-context git-sync push-consent; do
     run "rm -f '$DEST/hooks/$h.sh'"
@@ -99,8 +99,8 @@ fi
 # ---- files -------------------------------------------------------------------
 run "mkdir -p '$DEST/agents' '$DEST/commands' '$DEST/skills' '$DEST/hooks'"
 run "cp '$KIT/.claude/agents/'laravel-*.md '$KIT/.claude/agents/'blade-*.md '$DEST/agents/'"
-run "rm -rf '$DEST/commands/laravel'"
-run "cp -R '$KIT/.claude/commands/laravel' '$DEST/commands/'"
+run "rm -rf '$DEST/commands/lw' '$DEST/commands/laravel'"
+run "cp -R '$KIT/.claude/commands/lw' '$DEST/commands/'"
 for s in laravel-conventions blade-conventions php-conventions feature-blueprint; do
   run "rm -rf '$DEST/skills/$s'"
   run "cp -R '$KIT/.claude/skills/$s' '$DEST/skills/'"
@@ -113,7 +113,7 @@ run "mkdir -p '$DEST/templates'"
 run "cp '$KIT/templates/'*.md '$DEST/templates/'"
 run "chmod +x '$DEST/hooks/'*.sh"
 say "agents:   $(ls "$KIT/.claude/agents" | wc -l | tr -d ' ') files"
-say "commands: /laravel:$(ls "$KIT/.claude/commands/laravel" | sed 's/\.md$//' | tr '\n' ' ' | sed 's/ /, \/laravel:/g; s/, \/laravel:$//')"
+say "commands: /lw:$(ls "$KIT/.claude/commands/lw" | sed 's/\.md$//' | tr '\n' ' ' | sed 's/ /, \/lw:/g; s/, \/lw:$//')"
 say "skills:   laravel-conventions, blade-conventions, php-conventions, feature-blueprint (+ $(cat "$KIT/.claude/skills/"*/references/* /dev/null | wc -l | tr -d ' ') lines of references)"
 say "hooks:    session-context, post-edit (guard-php, guard-blade, guard-styles, guard-editor, format), bash-guard, guard-secrets, guard-owner, guard-comments, verify"
 say "helpers:  stack.sh (detection, cached), tasks.sh (task bookkeeping), run-tasks.sh (headless runner), verify-browser.sh, git-sync.sh (stage pull + push)"
@@ -167,7 +167,7 @@ if [ "$GLOBAL" = 0 ] && [ -n "$STAGE_BRANCH" ]; then
   elif ! git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then say "stage:    skipped — $TARGET is not a git repository"
   else say "stage:    $(CLAUDE_PROJECT_DIR="$TARGET" bash "$DEST/hooks/git-sync.sh" stage "$STAGE_BRANCH" 2>&1 | tail -n 1)"; fi
 elif [ "$GLOBAL" = 0 ] && [ ! -f "$DEST/workflow.conf" ] && git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1; then
-  say "stage:    not set — /laravel:setup or the first /laravel:sync asks (or re-run with --stage-branch <name>)"
+  say "stage:    not set — /lw:setup or the first /lw:sync asks (or re-run with --stage-branch <name>)"
 fi
 
 # ---- tasks folder (2.2 moved it under .claude) --------------------------------
@@ -187,21 +187,21 @@ cat <<'NEXT'
 
 Done. In that project, start Claude Code and run:
 
-    /laravel:setup                       detect the stack, seed the project memory (once)
+    /lw:setup                       detect the stack, seed the project memory (once)
 
 Plan, approve, build:
 
-    /laravel:write-task <what you want>  planner (Opus) writes draft task files
+    /lw:write-task <what you want>  planner (Opus) writes draft task files
     bash .claude/hooks/tasks.sh approve all        after you've read them
-    /laravel:task                        build the next task (Sonnet)
-    /laravel:feature <id>                force the full phased build on one task
+    /lw:task                        build the next task (Sonnet)
+    /lw:feature <id>                force the full phased build on one task
 
 Long batches — each task in a fresh session, one commit per task on its own branch:
 
     bash .claude/hooks/run-tasks.sh --checkpoint
 
-Around the work:  /laravel:test  /laravel:review  /laravel:audit  /laravel:ship
-Git:              /laravel:sync   commit + pull the stage branch + check + push, in one go
+Around the work:  /lw:test  /lw:review  /lw:audit  /lw:ship
+Git:              /lw:sync   commit + pull the stage branch + check + push, in one go
 Numbers:          bash .claude/hooks/tasks.sh stats
 
 NEXT

@@ -82,7 +82,7 @@ table.set td:nth-child(2) { width: 26%; }
 <li><b>The decisions stay yours.</b> Claude can't approve its own drafts, accept work nobody could check, or push.</li>
 <li><b>It's safe to undo.</b> You can get one commit per task and roll back any single task.</li>
 </ul>
-<div class="note"><b>In one sentence</b>Describe what you want with <code>/laravel:write-task</code>, approve the plan, run <code>/laravel:task</code>, and every task is built, independently checked and recorded.</div>
+<div class="note"><b>In one sentence</b>Describe what you want with <code>/lw:write-task</code>, approve the plan, run <code>/lw:task</code>, and every task is built, independently checked and recorded.</div>
 
 <h2>2. What you need first</h2>
 <table>
@@ -102,15 +102,15 @@ table.set td:nth-child(2) { width: 26%; }
 <table>
 <thead><tr><th></th><th>A. Plugin <span class="new">new in 2.4</span></th><th>B. Project files</th></tr></thead>
 <tr><td>Where it lives</td><td class="wrap">Once, in Claude Code. Nothing is copied into the project.</td><td class="wrap">Copied into <code>your-app/.claude/</code>, so it can be committed for the team.</td></tr>
-<tr><td>Updating</td><td class="wrap"><code>claude plugin update laravel@laravel-workflow</code></td><td class="wrap">Run <code>./install.sh</code> again.</td></tr>
+<tr><td>Updating</td><td class="wrap"><code>claude plugin update lw@laravel-workflow</code></td><td class="wrap">Run <code>./install.sh</code> again.</td></tr>
 <tr><td>Helper commands</td><td class="wrap">In the plugin's folder. The session report prints the path ("Kit helpers").</td><td class="wrap"><code>bash .claude/hooks/…</code></td></tr>
 </table>
 
 <div class="step"><div class="dot">A</div><div>
 <h4>Install as a plugin</h4>
 <pre>claude plugin marketplace add sumonsbgc/laravel-claude-workflow
-claude plugin install laravel@laravel-workflow</pre>
-<p>The commands are the same <code>/laravel:*</code>. A plugin can't carry permission rules, so extra checks take their place: one approves only the kit's own helpers, your test, lint and build commands, a few read-only artisan commands and Boost's read-only tools; one blocks Claude from reading <code>.env</code> files, keys, <code>auth.json</code> and <code>storage/</code>. Your own deny and ask rules always win.</p>
+claude plugin install lw@laravel-workflow</pre>
+<p>The commands are the same <code>/lw:*</code>. A plugin can't carry permission rules, so extra checks take their place: one approves only the kit's own helpers, your test, lint and build commands, a few read-only artisan commands and Boost's read-only tools; one blocks Claude from reading <code>.env</code> files, keys, <code>auth.json</code> and <code>storage/</code>. Your own deny and ask rules always win.</p>
 </div></div>
 
 <div class="step"><div class="dot">B</div><div>
@@ -125,7 +125,7 @@ cd laravel-claude-workflow
 <h4>Open Claude Code in your app, then run setup once</h4>
 <pre>cd /path/to/your-laravel-app
 claude
-/laravel:setup</pre>
+/lw:setup</pre>
 <p>At start you'll see a short report: kit version, Laravel and PHP versions, the view layer, drivers, storage, the Kit helpers path and the verify commands. That means it's working. Setup creates <code>.claude/tasks/</code>, fills <code>.claude/project-context.md</code> with facts about your repo, adds a short pointer to <code>CLAUDE.md</code>, recommends Laravel Boost if it's missing, and tells you what won't work here.</p>
 <div class="warn"><b>If setup says static analysis is already failing</b>Type <code>! bash .claude/hooks/verify.sh --baseline</code> in the prompt (plugin: the Kit helpers path from the report). That records the existing findings. Claude isn't allowed to do this itself, so it can never excuse its own mistakes.</div>
 </div></div>
@@ -148,7 +148,7 @@ php artisan boost:install          <span class="c"># choose Claude Code: guideli
 <h2>5. Your first task: plan, approve, build</h2>
 <div class="step"><div class="dot">1</div><div>
 <h4>Describe what you want</h4>
-<pre>/laravel:write-task an admin screen where editors manage their own news and can delete one</pre>
+<pre>/lw:write-task an admin screen where editors manage their own news and can delete one</pre>
 <p>The planner (Opus) asks questions first if something is unclear, splits big requests into small tasks, sets the order (<code>depends</code>) and size, and writes them as <b>drafts</b>. It never writes code. For a whole app or a feature that spans layers it writes a full plan first and one task per layer file (section 19).</p>
 </div></div>
 <div class="step"><div class="dot">2</div><div>
@@ -178,7 +178,7 @@ Editors see and delete only their own news items in the admin area.
 </div></div>
 <div class="step"><div class="dot">3</div><div>
 <h4>Build it</h4>
-<pre>/laravel:task</pre>
+<pre>/lw:task</pre>
 <p>Sonnet takes the next runnable task and works through it: builds it (directly if small, with the full phased build if large), runs the checks, gets the verifier's verdict (section 6), closes it with a log line, and saves what it learned.</p>
 </div></div>
 <div class="flow">draft <span>→ you approve →</span> todo <span>→</span> doing <span>→</span> done <span>or</span> review <span>or</span> blocked</div>
@@ -195,7 +195,7 @@ Editors see and delete only their own news items in the admin area.
 </table>
 
 <h2>7. Running many tasks safely</h2>
-<p>Running tasks one after another in a single conversation lets context pile up, and quality drops by the 4th or 5th task. So <code>/laravel:task all</code> stops after 3. For longer batches use the runner, which starts a fresh session for every task:</p>
+<p>Running tasks one after another in a single conversation lets context pile up, and quality drops by the 4th or 5th task. So <code>/lw:task all</code> stops after 3. For longer batches use the runner, which starts a fresh session for every task:</p>
 <pre>bash .claude/hooks/run-tasks.sh --checkpoint                <span class="c"># all runnable tasks, in order</span>
 bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># just these, max $3 each</span></pre>
 <table>
@@ -208,11 +208,11 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 </table>
 <p>The runner stops at the first task that doesn't finish (blocked, failed or over budget); run it again and it continues from there. A task that ends in <code>review</code> doesn't stop the batch: the runner tells you to check it and moves on to tasks that don't depend on it.</p>
 <p><b>Undo one task</b> (needs <code>--checkpoint</code>): <code>bash .claude/hooks/tasks.sh undo 004</code>. If later finished tasks depend on it, add <code>--cascade</code> to undo those first, newest first.</p>
-<p>When the batch looks good, run <code>/laravel:sync</code> (section 8). Claude can't push or open pull requests on its own.</p>
+<p>When the batch looks good, run <code>/lw:sync</code> (section 8). Claude can't push or open pull requests on its own.</p>
 
 <h2>8. Git: one command to commit, pull, push</h2>
 <p>One command does the whole round. Only you can start it, so Claude never runs it on its own: <span class="new">new</span></p>
-<pre>/laravel:sync [commit message]</pre>
+<pre>/lw:sync [commit message]</pre>
 <table>
 <thead><tr><th>Step</th><th>What happens</th></tr></thead>
 <tr><td>1. Commit</td><td class="wrap">Stages everything not ignored, refuses secret files, and commits with a message in your project's style (or yours, if you pass one).</td></tr>
@@ -223,43 +223,43 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <div class="step"><div class="dot">1</div><div>
 <h4>Tell it your stage branch once</h4>
 <pre>./install.sh /path/to/app --stage-branch stage          <span class="c"># at install, or:</span>
-/laravel:setup                                             <span class="c"># asks for it</span></pre>
-<p>It's stored in <code>.claude/workflow.conf</code> (<code>STAGE_BRANCH=stage</code>, <code>SYNC_MODE=merge</code>). Commit that file so the team shares it. If it's missing, the first <code>/laravel:sync</code> asks.</p>
+/lw:setup                                             <span class="c"># asks for it</span></pre>
+<p>It's stored in <code>.claude/workflow.conf</code> (<code>STAGE_BRANCH=stage</code>, <code>SYNC_MODE=merge</code>). Commit that file so the team shares it. If it's missing, the first <code>/lw:sync</code> asks.</p>
 </div></div>
-<p>A plain <code>git push</code> from Claude is always blocked and redirected, so no push can skip the stage pull. The git work is done by <code>git-sync.sh</code> (<code>status</code>, <code>sync</code>, <code>push</code>, <code>stage</code>, <code>candidates</code>), which you can also run in your own terminal. With the Laravel kit, a push happens only after <b>you</b> type <code>/laravel:sync</code> (that counts as your go-ahead for that turn only); asking in plain words commits but doesn't push.</p>
+<p>A plain <code>git push</code> from Claude is always blocked and redirected, so no push can skip the stage pull. The git work is done by <code>git-sync.sh</code> (<code>status</code>, <code>sync</code>, <code>push</code>, <code>stage</code>, <code>candidates</code>), which you can also run in your own terminal. With the Laravel kit, a push happens only after <b>you</b> type <code>/lw:sync</code> (that counts as your go-ahead for that turn only); asking in plain words commits but doesn't push.</p>
 
 <h2>9. All commands and helpers</h2>
 <table>
 <thead><tr><th>Slash command</th><th>Model</th><th>Use it to…</th></tr></thead>
-<tr><td><code>/laravel:setup</code></td><td>current</td><td class="wrap">Connect the workflow to the project. Run once.</td></tr>
-<tr><td><code>/laravel:write-task &lt;what&gt;</code></td><td>Opus</td><td class="wrap">Plan work into draft tasks. For a whole app or a multi-layer feature it uses the <code>feature-blueprint</code> skill (section 19). Never writes application code.</td></tr>
-<tr><td><code>/laravel:task [id|all|list|feature layer]</code></td><td>Sonnet</td><td class="wrap">Build tasks: your main command. <code>/laravel:task invoicing model</code> runs one layer of a planned feature.</td></tr>
-<tr><td><code>/laravel:feature &lt;id|feature&gt;</code></td><td>Sonnet</td><td class="wrap">Force the full phased build (migration → model → route → view → tests → review). Accepts a planned feature's name.</td></tr>
-<tr><td><code>/laravel:plan-status [feature]</code></td><td>Sonnet</td><td class="wrap">Progress of the planned features per wave: done, blocked, in review, and what can run next. Read-only.</td></tr>
-<tr><td><code>/laravel:test [target]</code></td><td>current</td><td class="wrap">Write or fix tests outside a task.</td></tr>
-<tr><td><code>/laravel:review [target]</code></td><td>Opus reviewer</td><td class="wrap">Review changes for authorization, injection, caching, N+1 and Blade escaping bugs.</td></tr>
-<tr><td><code>/laravel:audit [path]</code></td><td>current</td><td class="wrap">Performance and accessibility audit, ranked.</td></tr>
-<tr><td><code>/laravel:ship</code></td><td>current</td><td class="wrap">Tests, lint, static analysis, asset build and deploy steps. Never commits.</td></tr>
-<tr><td><code>/laravel:sync [message]</code></td><td>current</td><td class="wrap">Commit, pull the stage branch in, re-run the tests and push (section 8). Only you can start it.</td></tr>
+<tr><td><code>/lw:setup</code></td><td>current</td><td class="wrap">Connect the workflow to the project. Run once.</td></tr>
+<tr><td><code>/lw:write-task &lt;what&gt;</code></td><td>Opus</td><td class="wrap">Plan work into draft tasks. For a whole app or a multi-layer feature it uses the <code>feature-blueprint</code> skill (section 19). Never writes application code.</td></tr>
+<tr><td><code>/lw:task [id|all|list|feature layer]</code></td><td>Sonnet</td><td class="wrap">Build tasks: your main command. <code>/lw:task invoicing model</code> runs one layer of a planned feature.</td></tr>
+<tr><td><code>/lw:feature &lt;id|feature&gt;</code></td><td>Sonnet</td><td class="wrap">Force the full phased build (migration → model → route → view → tests → review). Accepts a planned feature's name.</td></tr>
+<tr><td><code>/lw:plan-status [feature]</code></td><td>Sonnet</td><td class="wrap">Progress of the planned features per wave: done, blocked, in review, and what can run next. Read-only.</td></tr>
+<tr><td><code>/lw:test [target]</code></td><td>current</td><td class="wrap">Write or fix tests outside a task.</td></tr>
+<tr><td><code>/lw:review [target]</code></td><td>Opus reviewer</td><td class="wrap">Review changes for authorization, injection, caching, N+1 and Blade escaping bugs.</td></tr>
+<tr><td><code>/lw:audit [path]</code></td><td>current</td><td class="wrap">Performance and accessibility audit, ranked.</td></tr>
+<tr><td><code>/lw:ship</code></td><td>current</td><td class="wrap">Tests, lint, static analysis, asset build and deploy steps. Never commits.</td></tr>
+<tr><td><code>/lw:sync [message]</code></td><td>current</td><td class="wrap">Commit, pull the stage branch in, re-run the tests and push (section 8). Only you can start it.</td></tr>
 </table>
 <h3>Examples</h3>
 <pre><span class="c"># plan a whole app: plan files with code, one task per layer (section 19)</span>
-/laravel:write-task plan a barbershop booking app, 4 devs, laravel + blade + mysql
+/lw:write-task plan a barbershop booking app, 4 devs, laravel + blade + mysql
 
 <span class="c"># plan one feature of an app that already exists</span>
-/laravel:write-task add discount coupons to checkout: percent or fixed, expiry, usage limit
+/lw:write-task add discount coupons to checkout: percent or fixed, expiry, usage limit
 
 <span class="c"># plan a small change: one or two draft tasks, no plan folder</span>
-/laravel:write-task an admin screen where editors manage their own news and can delete one
+/lw:write-task an admin screen where editors manage their own news and can delete one
 
 <span class="c"># build: the next task, one task, or one layer of a planned feature</span>
-/laravel:task
-/laravel:task 014
-/laravel:task invoicing model
+/lw:task
+/lw:task 014
+/lw:task invoicing model
 
 <span class="c"># see where everything stands, per wave</span>
-/laravel:plan-status</pre>
-<p>The word <code>plan</code> in <code>/laravel:write-task plan a barbershop…</code> is only wording. The planner chooses between a full plan and one or two plain tasks from what you describe: a whole app or a feature that spans layers gets the plan with code; a small single-layer change gets plain tasks. Say what the scope is ("a whole app", "a feature", "a small change") if you want to be sure.</p>
+/lw:plan-status</pre>
+<p>The word <code>plan</code> in <code>/lw:write-task plan a barbershop…</code> is only wording. The planner chooses between a full plan and one or two plain tasks from what you describe: a whole app or a feature that spans layers gets the plan with code; a small single-layer change gets plain tasks. Say what the scope is ("a whole app", "a feature", "a small change") if you want to be sure.</p>
 <p>Terminal helpers are below with the project-files path. With the plugin, use the <b>Kit helpers</b> path from the session report instead of <code>.claude/hooks</code>.</p>
 <table>
 <thead><tr><th>Terminal helper</th><th>Does</th></tr></thead>
@@ -274,7 +274,7 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <tr><td><code>… tasks.sh next / show &lt;id&gt; / log &lt;id&gt; "text"</code></td><td class="wrap">The next runnable task / print one task / add a line to a task's log</td></tr>
 <tr><td><code>… tasks.sh dir / migrate</code></td><td class="wrap">Which folder holds the tasks / move an older project's <code>tasks/</code> to <code>.claude/tasks/</code></td></tr>
 <tr><td><code>bash .claude/hooks/run-tasks.sh</code></td><td class="wrap">Batch runner, with a fresh session per task</td></tr>
-<tr><td><code>bash .claude/hooks/git-sync.sh status|sync|push|stage</code></td><td class="wrap">The git work behind <code>/laravel:sync</code> (section 8)</td></tr>
+<tr><td><code>bash .claude/hooks/git-sync.sh status|sync|push|stage</code></td><td class="wrap">The git work behind <code>/lw:sync</code> (section 8)</td></tr>
 <tr><td><code>bash .claude/hooks/verify.sh --baseline</code></td><td class="wrap">Record the static-analysis findings that already exist, so Claude is held only to new ones (your terminal only)</td></tr>
 <tr><td><code>bash .claude/hooks/verify-browser.sh &lt;id&gt;</code></td><td class="wrap">Run a task's throwaway browser checks with the kit's Playwright config (the verifier calls it)</td></tr>
 <tr><td><code>bash .claude/hooks/repo-map.sh [--refresh]</code></td><td class="wrap">Print the cached map of the app that <code>tasks.sh map</code> shows</td></tr>
@@ -293,7 +293,7 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <tr><td><code>laravel-perf-auditor</code></td><td class="wrap">Queries, indexes, caching, queues, asset size</td><td>No</td></tr>
 <tr><td><code>blade-a11y-auditor</code></td><td class="wrap">Semantics, keyboard, labels, focus, contrast</td><td>No</td></tr>
 </table>
-<p>Every agent starts with the stack report and project memory, so it doesn't explore your code from scratch. With the plugin, agents are named <code>laravel:laravel-verifier</code> and so on.</p>
+<p>Every agent starts with the stack report and project memory, so it doesn't explore your code from scratch. With the plugin, agents are named <code>lw:laravel-verifier</code> and so on.</p>
 
 <h2>11. Automatic checks (hooks)</h2>
 <table>
@@ -342,7 +342,7 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <tr><td><code>LARAVEL_WF_VERIFY</code></td><td class="wrap"><code>syntax</code> (default), <code>syntax,lint,analyse</code>, <code>off</code></td><td class="wrap">What runs before Claude finishes</td></tr>
 <tr><td><code>LARAVEL_WF_REQUIRE_VERDICT</code></td><td><code>on</code>, <code>off</code></td><td class="wrap">The verdict gate on close (section 6)</td></tr>
 <tr><td><code>LARAVEL_WF_REQUIRE_APPROVAL</code></td><td><code>on</code>, <code>off</code></td><td class="wrap"><code>off</code> removes the approve and accept steps (section 5). <span class="new">2.5</span></td></tr>
-<tr><td><code>LARAVEL_WF_ALLOW_PUSH</code></td><td><code>1</code></td><td class="wrap">Let Claude push (still through <code>git-sync.sh</code>) and open/merge pull requests without you typing <code>/laravel:sync</code></td></tr>
+<tr><td><code>LARAVEL_WF_ALLOW_PUSH</code></td><td><code>1</code></td><td class="wrap">Let Claude push (still through <code>git-sync.sh</code>) and open/merge pull requests without you typing <code>/lw:sync</code></td></tr>
 <tr><td><code>LARAVEL_WF_STAGE_BRANCH</code>, <code>…_SYNC_MODE</code></td><td class="wrap">a branch; <code>merge</code>, <code>rebase</code></td><td class="wrap">Override <code>.claude/workflow.conf</code> (section 8)</td></tr>
 <tr><td><code>LARAVEL_WF_PHP_GUARD</code>, <code>…_BLADE_GUARD</code></td><td><code>warn</code>, <code>off</code></td><td class="wrap">Soften a guard</td></tr>
 <tr><td><code>LARAVEL_WF_EDITOR_GUARD</code>, <code>…_STYLE_GUARD</code>, <code>…_SECRETS_GUARD</code></td><td><code>off</code></td><td class="wrap">Turn a guard off</td></tr>
@@ -353,16 +353,16 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <tr><td><code>LARAVEL_WF_METRICS</code></td><td><code>on</code>, <code>off</code></td><td class="wrap">Recording to <code>metrics.jsonl</code></td></tr>
 </table>
 <p>Settings that belong to the whole team can live in <code>.claude/workflow.conf</code> (commit it): <code>STAGE_BRANCH</code>, <code>SYNC_MODE</code> and <code>REQUIRE_APPROVAL</code>. An environment variable overrides the file. Claude can edit project files but not your shell's environment, so for a switch that must hold, such as approval, prefer the environment variable.</p>
-<p><b>Update:</b> plugin: <code>claude plugin update laravel@laravel-workflow</code>. Project files: run <code>./install.sh /path/to/app</code> again. <b>Remove:</b> <code>claude plugin uninstall laravel@laravel-workflow</code>, or <code>./install.sh /path/to/app --uninstall</code>, which removes the kit's files and hook entries and keeps your tasks, memory and own settings.</p>
+<p><b>Update:</b> plugin: <code>claude plugin update lw@laravel-workflow</code>. Project files: run <code>./install.sh /path/to/app</code> again. <b>Remove:</b> <code>claude plugin uninstall lw@laravel-workflow</code>, or <code>./install.sh /path/to/app --uninstall</code>, which removes the kit's files and hook entries and keeps your tasks, memory and own settings.</p>
 
 <h2>15. A typical day</h2>
 <ol>
-<li>For a new app or a big feature: <code>/laravel:write-task …</code> with the scope in your words, review the overview and feature list, say go, then give each developer a feature or a layer (section 19). For small work: <code>/laravel:write-task …</code>, then answer its questions.</li>
+<li>For a new app or a big feature: <code>/lw:write-task …</code> with the scope in your words, review the overview and feature list, say go, then give each developer a feature or a layer (section 19). For small work: <code>/lw:write-task …</code>, then answer its questions.</li>
 <li>Read the drafts in <code>.claude/tasks/</code>, then <code>tasks.sh approve all</code> in your own terminal.</li>
 <li>Optional: start <code>php artisan serve</code> and set <code>LARAVEL_WF_DEV_URL</code> so browser checks really run.</li>
-<li><code>bash .claude/hooks/run-tasks.sh --checkpoint</code> and let it work, or <code>/laravel:task</code> for one at a time.</li>
+<li><code>bash .claude/hooks/run-tasks.sh --checkpoint</code> and let it work, or <code>/lw:task</code> for one at a time.</li>
 <li>Check the result. For tasks in <code>review</code>, check the criteria named in their log, then <code>tasks.sh accept &lt;id&gt;</code>. Undo any task you don't like with <code>tasks.sh undo &lt;id&gt;</code>.</li>
-<li><code>/laravel:review</code>, then <code>/laravel:ship</code>. When everything is green, <code>/laravel:sync</code>: it pulls the stage branch in, re-runs the tests and pushes.</li>
+<li><code>/lw:review</code>, then <code>/lw:ship</code>. When everything is green, <code>/lw:sync</code>: it pulls the stage branch in, re-runs the tests and pushes.</li>
 <li>Now and then, run <code>tasks.sh stats</code> to see cost, time, the verifier's pass rate and which checks fire most.</li>
 </ol>
 
@@ -371,11 +371,11 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
 <tr><td class="wrap">Every turn fails on old PHPStan findings</td><td class="wrap">Record them once: <code>! bash .claude/hooks/verify.sh --baseline</code></td></tr>
 <tr><td class="wrap">"task is still a draft"</td><td class="wrap">Read it, then <code>tasks.sh approve &lt;id&gt;</code> in your own terminal.</td></tr>
-<tr><td class="wrap">"no verdict recorded" when closing</td><td class="wrap">Intended: every task needs the verifier's verdict (section 6). Let <code>/laravel:task</code> finish the verification step.</td></tr>
+<tr><td class="wrap">"no verdict recorded" when closing</td><td class="wrap">Intended: every task needs the verifier's verdict (section 6). Let <code>/lw:task</code> finish the verification step.</td></tr>
 <tr><td class="wrap">A task waits in <code>review</code></td><td class="wrap">A <code>[browser]</code> criterion couldn't be checked. Check it yourself, then <code>tasks.sh accept &lt;id&gt;</code>.</td></tr>
 <tr><td class="wrap">The verifier marks <code>[browser]</code> items UNVERIFIED</td><td class="wrap">Start the app, set <code>LARAVEL_WF_DEV_URL</code>, and install Playwright.</td></tr>
-<tr><td class="wrap">Claude was blocked from pushing</td><td class="wrap">Intended: type <code>/laravel:sync</code>, or run <code>git-sync.sh push</code> yourself.</td></tr>
-<tr><td class="wrap"><code>/laravel:sync</code> stopped on a conflict</td><td class="wrap">The stage branch changed the same lines. Resolve them (or ask Claude to), then run <code>/laravel:sync</code> again. Nothing was pushed.</td></tr>
+<tr><td class="wrap">Claude was blocked from pushing</td><td class="wrap">Intended: type <code>/lw:sync</code>, or run <code>git-sync.sh push</code> yourself.</td></tr>
+<tr><td class="wrap"><code>/lw:sync</code> stopped on a conflict</td><td class="wrap">The stage branch changed the same lines. Resolve them (or ask Claude to), then run <code>/lw:sync</code> again. Nothing was pushed.</td></tr>
 <tr><td class="wrap">"installed twice" at session start</td><td class="wrap">The project has both the plugin and project files. Keep one: <code>./install.sh /path/to/app --uninstall</code>, or disable the plugin.</td></tr>
 <tr><td class="wrap">Plugin: a helper command still asks permission</td><td class="wrap">Only plain helper and verify commands are pre-approved. Anything chained, with flags, or matching one of your own ask rules asks on purpose.</td></tr>
 <tr><td class="wrap"><code>undo</code> says there's no checkpoint</td><td class="wrap">The task was closed without <code>--checkpoint</code>. Use <code>tasks.sh diff</code> and revert by hand.</td></tr>
@@ -383,7 +383,7 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <tr><td class="wrap">Claude asks permission to edit a file in <code>.claude/</code></td><td class="wrap">Normal: Claude Code protects that folder. New drafts don't ask, because they're written by <code>tasks.sh new</code>. Approve edits you asked for, or pick "allow for this session".</td></tr>
 <tr><td class="wrap">Your tasks are still in <code>tasks/</code> after an upgrade</td><td class="wrap">They keep working. Move them with <code>tasks.sh migrate</code>.</td></tr>
 <tr><td class="wrap">The plan stopped after the overview</td><td class="wrap">Intended. Read <code>00-Overview.md</code> and the feature list, correct what's wrong, then tell it to continue. Nothing detailed is written before your go.</td></tr>
-<tr><td class="wrap"><code>/laravel:task invoicing model</code> finds nothing</td><td class="wrap">The plan exists but its tasks don't yet, or they are still drafts. Run <code>/laravel:write-task</code> on the plan, check <code>tasks.sh list</code>, then <code>approve</code>.</td></tr>
+<tr><td class="wrap"><code>/lw:task invoicing model</code> finds nothing</td><td class="wrap">The plan exists but its tasks don't yet, or they are still drafts. Run <code>/lw:write-task</code> on the plan, check <code>tasks.sh list</code>, then <code>approve</code>.</td></tr>
 <tr><td class="wrap">There is no <code>01-BRD.pdf</code></td><td class="wrap">No PDF skill was available; the Markdown is the deliverable. Enable a PDF skill and ask for the BRD to be rendered again.</td></tr>
 <tr><td class="wrap">The code in a layer file doesn't match my repo</td><td class="wrap">The builder follows your repository's conventions where they differ and writes each deviation in the task's log. Edit the layer file before running the task if you want it changed.</td></tr>
 <tr><td class="wrap">A plan file in <code>.claude/tasks/</code> is ignored</td><td class="wrap">That's intended: only files starting with <code>---</code> frontmatter are tasks.</td></tr>
@@ -396,14 +396,15 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <h2>17. What's new in 2.6 to 2.3</h2>
 <table>
 <thead><tr><th>Change</th><th>What it means for you</th></tr></thead>
+<tr><td>New prefix: <code>lw</code> <span class="new">2.6</span></td><td class="wrap">All commands are now <code>/lw:*</code> (was <code>/laravel:*</code>), the plugin is <code>lw@laravel-workflow</code>, and only <code>/lw:sync</code> counts as your push go-ahead. Upgrading: plugin users uninstall <code>laravel@laravel-workflow</code> and install <code>lw@laravel-workflow</code>; file installs run <code>./install.sh</code> again, which removes the old <code>commands/laravel</code> folder.</td></tr>
 <tr><td>Plan with code <span class="new">2.6</span></td><td class="wrap">The <code>feature-blueprint</code> skill plans a whole app or a feature as a folder per feature and a file per layer, each with the full code, split into small tasks (section 19).</td></tr>
 <tr><td>Two-stage planning <span class="new">2.6</span></td><td class="wrap">The overview and feature list come first and stop for your approval; per-feature files are written only after you say go.</td></tr>
-<tr><td>Pick one layer <span class="new">2.6</span></td><td class="wrap"><code>/laravel:task invoicing model</code> runs one layer of a planned feature; <code>/laravel:plan-status</code> shows progress per wave.</td></tr>
+<tr><td>Pick one layer <span class="new">2.6</span></td><td class="wrap"><code>/lw:task invoicing model</code> runs one layer of a planned feature; <code>/lw:plan-status</code> shows progress per wave.</td></tr>
 <tr><td>BRD as PDF <span class="new">2.6</span></td><td class="wrap">Each feature's requirements are written as Markdown and rendered to a PDF to sign off.</td></tr>
 <tr><td>Guard hardening <span class="new">2.5</span></td><td class="wrap">The owner and secrets guards read shell commands, heredocs and wildcards more strictly, so fewer odd commands slip past them.</td></tr>
 <tr><td>Approval switch <span class="new">2.5</span></td><td class="wrap"><code>REQUIRE_APPROVAL=off</code> in <code>.claude/workflow.conf</code>, or <code>LARAVEL_WF_REQUIRE_APPROVAL=off</code> in your environment, removes the approve and accept steps. The verifier gate and the push rule stay.</td></tr>
-<tr><td>Git commands <span class="new">2.4</span></td><td class="wrap"><code>/laravel:sync</code> commits, pulls the stage branch in, checks and pushes in one go. Every push pulls the stage branch in first (section 8).</td></tr>
-<tr><td>Plugin install <span class="new">2.4</span></td><td class="wrap">Install once, update with one command, nothing copied into projects (section 3). The commands stay <code>/laravel:*</code>; the session report prints where the helpers are.</td></tr>
+<tr><td>Git commands <span class="new">2.4</span></td><td class="wrap"><code>/lw:sync</code> commits, pulls the stage branch in, checks and pushes in one go. Every push pulls the stage branch in first (section 8).</td></tr>
+<tr><td>Plugin install <span class="new">2.4</span></td><td class="wrap">Install once, update with one command, nothing copied into projects (section 3). The commands are the same as with project files; the session report prints where the helpers are.</td></tr>
 <tr><td>Plugin safety <span class="new">2.4</span></td><td class="wrap">Guards always run, even if a project file tries to replace one. The kit's helpers are approved only by the plugin's own absolute path, and verify commands only with plain file arguments.</td></tr>
 <tr><td>Pure code <span class="new">2.4</span></td><td class="wrap">Code written for a task has no comments. The rule is in every builder's instructions, and <code>guard-comments</code> blocks an edit that adds one, so Claude rewrites it without.</td></tr>
 <tr><td>Verdict gate <span class="new">2.3</span></td><td class="wrap">A task can't close without the verifier's verdict. A FAIL must be fixed and checked again first.</td></tr>
@@ -428,7 +429,7 @@ bash evals/run.sh                  <span class="c"># 3 real agent runs (costs AP
 <p>The planning skill has its own two test cases in <code>.claude/skills/feature-blueprint/evals/</code> (a new app, and a feature in an existing app). They are run with and without the skill and graded against fixed checks. In the last run the skill passed 17 of 17 checks and the plain model 9 of 17, one run each.</p>
 
 <h2>19. Planning a whole app or feature, with code</h2>
-<p>For a small change, <code>/laravel:write-task</code> writes one or two task files. For a whole application, or a feature that needs a schema, model, routes, views and tests, it uses the <b>feature-blueprint</b> skill and writes a plan you can hand to developers. The plan holds the real code, not a description of it.</p>
+<p>For a small change, <code>/lw:write-task</code> writes one or two task files. For a whole application, or a feature that needs a schema, model, routes, views and tests, it uses the <b>feature-blueprint</b> skill and writes a plan you can hand to developers. The plan holds the real code, not a description of it.</p>
 
 <h3>What gets written</h3>
 <pre>.claude/plans/
@@ -457,7 +458,7 @@ bash evals/run.sh                  <span class="c"># 3 real agent runs (costs AP
 <h3>The steps</h3>
 <div class="step"><div class="dot">1</div><div>
 <h4>Ask for the plan</h4>
-<pre>/laravel:write-task plan a barbershop booking app, 4 devs, laravel + blade + mysql</pre>
+<pre>/lw:write-task plan a barbershop booking app, 4 devs, laravel + blade + mysql</pre>
 <p>For an existing app it first reads your code and writes <code>_recon.md</code>. It asks at most three questions, writes the overview and index, and <b>stops</b>. Anything it could not confirm is marked <code>ASSUMPTION:</code>.</p>
 </div></div>
 <div class="step"><div class="dot">2</div><div>
@@ -470,10 +471,10 @@ bash evals/run.sh                  <span class="c"># 3 real agent runs (costs AP
 </div></div>
 <div class="step"><div class="dot">4</div><div>
 <h4>Build one layer</h4>
-<pre>/laravel:task invoicing model       <span class="c"># one layer, found by feature and layer name</span>
-/laravel:task invoicing 02          <span class="c"># the same, by number</span>
-/laravel:task invoicing             <span class="c"># the feature's runnable layers in order</span>
-/laravel:plan-status                <span class="c"># progress per wave</span></pre>
+<pre>/lw:task invoicing model       <span class="c"># one layer, found by feature and layer name</span>
+/lw:task invoicing 02          <span class="c"># the same, by number</span>
+/lw:task invoicing             <span class="c"># the feature's runnable layers in order</span>
+/lw:plan-status                <span class="c"># progress per wave</span></pre>
 <p>The builder reads the layer file as its spec, implements it, adapts only where your repository's conventions differ (and logs the deviation), and the verifier checks it as for any task.</p>
 </div></div>
 

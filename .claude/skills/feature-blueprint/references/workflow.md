@@ -57,7 +57,7 @@ After all features are written, re-read them against their contracts and against
 
 ## Hand-off to the task runner
 
-Plans are read by people; tasks are run by the runner. `/laravel:write-task` creates one draft task per layer file (never for 01-BRD), titled `<feature> · <NN> <Layer>`, with `plan:` pointing at the layer file and `depends:` chaining the layers. The map from layer to task id goes in the feature README. Developers then run `/laravel:task <feature> <layer>`, and `/laravel:plan-status` shows where everything stands per wave.
+Plans are read by people; tasks are run by the runner. `/lw:write-task` creates one draft task per layer file (never for 01-BRD), titled `<feature> · <NN> <Layer>`, with `plan:` pointing at the layer file and `depends:` chaining the layers. The map from layer to task id goes in the feature README. Developers then run `/lw:task <feature> <layer>`, and `/lw:plan-status` shows where everything stands per wave.
 
 Status lives only in the task runner. The plan files do not carry status, so they never go stale.
 

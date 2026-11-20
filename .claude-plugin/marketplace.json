@@ -7,7 +7,7 @@
 	"description": "The laravel-workflow kit as a Claude Code plugin.",
 	"plugins": [
 		{
-			"name": "laravel",
+			"name": "lw",
 			"source": "./",
 			"description": "Laravel + Blade workflow: task runner, verifier, guards, project memory."
 		}

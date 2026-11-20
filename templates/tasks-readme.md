@@ -1,14 +1,14 @@
 # Tasks
 
-One file per task, run by `/laravel:task`.
+One file per task, run by `/lw:task`.
 
 ```
-/laravel:write-task <what you want>   plan it: the planner (Opus) writes draft task files
+/lw:write-task <what you want>   plan it: the planner (Opus) writes draft task files
 bash .claude/hooks/tasks.sh approve all      after you have read the drafts (your terminal, not Claude)
-/laravel:task            build the next runnable task (Sonnet)
-/laravel:task 003        build a specific task
-/laravel:feature 003     force the full phased build on task 003
-/laravel:task list       status of everything (cheap)
+/lw:task            build the next runnable task (Sonnet)
+/lw:task 003        build a specific task
+/lw:feature 003     force the full phased build on task 003
+/lw:task list       status of everything (cheap)
 bash .claude/hooks/run-tasks.sh --checkpoint   many tasks, fresh context each, one commit per task
 bash .claude/hooks/tasks.sh accept 003         after you checked what the verifier couldn't (status review)
 bash .claude/hooks/tasks.sh undo 003           revert task 003's checkpoint (add --cascade for dependents)
@@ -20,7 +20,7 @@ The `bash .claude/hooks/…` paths are for a project install. With `--global` th
 
 ## Writing a task
 
-Easiest: `/laravel:write-task <description>` — it asks what it needs, splits the work, and sets
+Easiest: `/lw:write-task <description>` — it asks what it needs, splits the work, and sets
 `size` and `depends` for you. By hand: copy `TEMPLATE.md` to `NNN-short-name.md` and fill it in
 (the file must start with `---` frontmatter, or the runner ignores it).
 The runner reads **only** the task it is working on, plus `.claude/project-context.md` — so
@@ -44,18 +44,18 @@ scratch files can live in this folder and will be ignored by the runner.
 
 ## Plans for whole features and apps
 
-For a whole application, or a feature that spans layers, `/laravel:write-task` uses the
+For a whole application, or a feature that spans layers, `/lw:write-task` uses the
 `feature-blueprint` skill: it writes a plan folder in `.claude/plans/<NN-feature>/` (BRD, migration,
 model, service, controller, view, test, verify, security, performance, each with its full code),
 then one draft task per layer file, titled `<feature> · <NN> <Layer>`, with `plan:` pointing at the
-layer file and `depends:` chaining the layers in order. Progress per wave: `/laravel:plan-status`.
+layer file and `depends:` chaining the layers in order. Progress per wave: `/lw:plan-status`.
 
 ```
-/laravel:task invoicing model     run one layer of a feature (finds it by feature and layer name)
-/laravel:task invoicing 02        the same, by layer number
-/laravel:task invoicing           the feature runnable layers in order (3 at most per session)
-/laravel:task 014                 any task by id
-/laravel:feature invoicing        the full phased build for every task of a feature
+/lw:task invoicing model     run one layer of a feature (finds it by feature and layer name)
+/lw:task invoicing 02        the same, by layer number
+/lw:task invoicing           the feature runnable layers in order (3 at most per session)
+/lw:task 014                 any task by id
+/lw:feature invoicing        the full phased build for every task of a feature
 ```
 
 Layers of one feature can be given to different developers or runs: they only wait on their

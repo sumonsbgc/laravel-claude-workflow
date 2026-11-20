@@ -8,7 +8,7 @@
 #   tasks.sh migrate              move a pre-2.2 ./tasks folder to .claude/tasks
 #   tasks.sh list [status]        one line per task: id, status, title [size]
 #   tasks.sh next                 path of the first runnable task (todo, deps done)
-#   tasks.sh nextid               the next free id, zero-padded (for /laravel:write-task)
+#   tasks.sh nextid               the next free id, zero-padded (for /lw:write-task)
 #   tasks.sh show <id>            print one task file
 #   tasks.sh context <id>         the task plus what its dependencies did (log lines, files changed):
 #                                 read this instead of re-exploring code a dependency just wrote

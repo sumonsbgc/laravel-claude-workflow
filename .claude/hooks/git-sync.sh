@@ -119,7 +119,7 @@ cmd_sync() {
   need_stage
   local b before; b="$(current_branch)"
   in_progress && die "a merge or rebase is already in progress: finish it (git add + git merge/rebase --continue) or abort it" 6
-  is_clean || die "uncommitted changes: commit them first (/laravel:sync commits them)" 4
+  is_clean || die "uncommitted changes: commit them first (/lw:sync commits them)" 4
   fetch
   remote_has "$STAGE" || die "$REMOTE/$STAGE does not exist" 2
   before="$(git rev-parse HEAD)"
@@ -139,7 +139,7 @@ cmd_push() {
   need_stage
   local b; b="$(current_branch)"
   in_progress && die "a merge or rebase is in progress: finish it first" 6
-  is_clean || die "uncommitted changes: commit them first (/laravel:sync commits them)" 4
+  is_clean || die "uncommitted changes: commit them first (/lw:sync commits them)" 4
   fetch
   remote_has "$STAGE" || die "$REMOTE/$STAGE does not exist" 2
   git merge-base --is-ancestor "$REMOTE/$STAGE" HEAD ||

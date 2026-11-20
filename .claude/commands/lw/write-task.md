@@ -22,7 +22,7 @@ You are the planner. A cheaper model will implement each task you write, startin
 
 ### Plan-backed tasks
 
-After stage 2, turn **each layer file into one draft task** so `/laravel:task` can run it one at a time. `01-BRD` is the reference for the others, not a task. For every other layer file that exists, in number order:
+After stage 2, turn **each layer file into one draft task** so `/lw:task` can run it one at a time. `01-BRD` is the reference for the others, not a task. For every other layer file that exists, in number order:
 
 - `id="$(bash $T nextid)"`, then `bash $T new <id>-<feature>-<layer> <<'TASK'` … `TASK`, in the usual shape plus one extra frontmatter line, `plan:`, holding the layer file path:
 
@@ -117,6 +117,6 @@ A short table — id, title, size, depends (for a plan, also the plan folder and
 
 1. Read the drafts in `.claude/tasks/` and edit anything you disagree with.
 2. In your own terminal (not through Claude — it refuses there): `bash <Kit helpers>/tasks.sh approve all` (or `approve <id>`), with the **Kit helpers** path from the session report filled in.
-3. `/laravel:task` for one at a time, or `bash <Kit helpers>/run-tasks.sh --checkpoint` for a batch with fresh context per task.
+3. `/lw:task` for one at a time, or `bash <Kit helpers>/run-tasks.sh --checkpoint` for a batch with fresh context per task.
 
 Nothing else.

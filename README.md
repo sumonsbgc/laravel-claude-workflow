@@ -19,13 +19,16 @@ Or as a Claude Code plugin, with nothing copied into the project:
 
 ```bash
 claude plugin marketplace add sumonsbgc/laravel-claude-workflow
-claude plugin install laravel@laravel-workflow
-claude plugin update laravel@laravel-workflow   # later, to upgrade
+claude plugin install lw@laravel-workflow
+claude plugin update lw@laravel-workflow   # later, to upgrade
 ```
 
 To install from a local clone instead, use its path: `claude plugin marketplace add /path/to/laravel-workflow`.
 
-The commands stay `/laravel:*`. The helpers then live in the plugin's folder, not `.claude/hooks`;
+Commands are `/lw:*` in both installs (`/lw:task`, `/lw:write-task`, `/lw:sync`, …). **Upgrading from
+2.5 or earlier, where the prefix was `/laravel:`:** plugin users run
+`claude plugin uninstall laravel@laravel-workflow` and then install `lw@laravel-workflow`; file
+installs just run `./install.sh` again, which removes the old `commands/laravel` folder. The helpers then live in the plugin's folder, not `.claude/hooks`;
 the session-start report prints that path ("Kit helpers"), so use it wherever this README says
 `bash .claude/hooks/…`. A plugin can't ship permission rules, so three extra hooks stand in for
 them: `guard-read.sh` blocks the Read tool on env files, keys, `auth.json` and `storage/`;
@@ -40,24 +43,24 @@ the other. `hooks/hooks.json` is generated from `.claude/settings.json`:
 Then, in that project:
 
 ```
-/laravel:setup                         detect the stack, seed the project memory (once)
-/laravel:write-task <what you want>    planner (Opus) writes draft task files
+/lw:setup                         detect the stack, seed the project memory (once)
+/lw:write-task <what you want>    planner (Opus) writes draft task files
 bash .claude/hooks/tasks.sh approve all          approve the drafts you've read
-/laravel:task                          build the next task (Sonnet), independently verified
+/lw:task                          build the next task (Sonnet), independently verified
 bash .claude/hooks/run-tasks.sh --checkpoint     long batches: fresh session + one commit per task
-/laravel:sync                          commit + pull the stage branch + check + push, in one go
+/lw:sync                          commit + pull the stage branch + check + push, in one go
 ```
 
 The stage branch is set once per project: `./install.sh /path/to/app --stage-branch stage`, or
-`/laravel:setup` asks. It is stored in `.claude/workflow.conf` — commit it. A plain `git push` by
-Claude is always blocked; `/laravel:sync` commits, runs `git-sync.sh sync` (merges the stage branch
+`/lw:setup` asks. It is stored in `.claude/workflow.conf` — commit it. A plain `git push` by
+Claude is always blocked; `/lw:sync` commits, runs `git-sync.sh sync` (merges the stage branch
 in, stops on conflicts), checks, then `git-sync.sh push`, which refuses a branch that doesn't
 contain the stage branch's latest commit.
 
 To skip your review steps, add `REQUIRE_APPROVAL=off` to `.claude/workflow.conf`: the planner
 writes tasks as `todo`, existing drafts run without `approve`, and work with unverifiable
 `[browser]` criteria closes as `done` (noted in its log) instead of waiting for `accept`. The
-independent verifier still runs, and pushing still needs `/laravel:sync`.
+independent verifier still runs, and pushing still needs `/lw:sync`.
 
 ## Why it exists
 
@@ -83,7 +86,7 @@ file is written — not three days later.
               laravel-test-writer    laravel-reviewer    laravel-perf-auditor
               blade-a11y-auditor     laravel-verifier
               laravel-architect
-  commands/laravel/
+  commands/lw/
               setup write-task task feature plan-status test review audit ship
   skills/     laravel-conventions   (http-layer, eloquent-and-data, auth-and-authorization,
                                      caching-and-queues, redis-and-cache, files-and-images,
@@ -102,9 +105,9 @@ file is written — not three days later.
 
 ## What's new in 2.0
 
-- **Plan → approve → build → verify.** `/laravel:write-task` (Opus) writes drafts with tagged acceptance criteria (`[test]`/`[browser]`/`[review]`); you approve; `/laravel:task` (Sonnet) builds; `laravel-verifier` checks the result against the task and diff only.
+- **Plan → approve → build → verify.** `/lw:write-task` (Opus) writes drafts with tagged acceptance criteria (`[test]`/`[browser]`/`[review]`); you approve; `/lw:task` (Sonnet) builds; `laravel-verifier` checks the result against the task and diff only.
 - **Safe batches.** `run-tasks.sh` gives every task a fresh session; `--checkpoint` makes one commit per task (never secrets, never pre-existing edits) on an `nw/batch-*` branch; `tasks.sh undo <id> [--cascade]`.
-- **Laravel Boost.** When installed, agents use its read-only MCP tools (`search-docs`, `database-schema`, `last-error`, `browser-logs`, …); `/laravel:setup` recommends it when absent.
+- **Laravel Boost.** When installed, agents use its read-only MCP tools (`search-docs`, `database-schema`, `last-error`, `browser-logs`, …); `/lw:setup` recommends it when absent.
 - **Verified references** (laravel.com 13.x): Laravel 13 changes, Redis and caching, uploads/S3/CDN/images, security.
 - **Post/Page content uses the Gutenberg block editor** (`@wordpress/block-editor` island), never CKEditor/TinyMCE; a guard flags violations.
 - **Hardening.** Injection-safe detection, narrowed permissions, secrets guard, shell-write guard, static-analysis baseline, metrics (`tasks.sh stats`), eval harness proven against a real Laravel 13 app.
@@ -139,7 +142,7 @@ LARAVEL_WF_REQUIRE_APPROVAL=off
 
 ## The task runner
 
-`/laravel:task` is the primary interface. `.claude/tasks/` holds one markdown file per task with
+`/lw:task` is the primary interface. `.claude/tasks/` holds one markdown file per task with
 frontmatter (`id`, `title`, `status`, `depends`), a goal, and an acceptance list that becomes the
 definition of done. The runner reads **only** the task it is running, routes by size (most tasks
 are done directly; multi-layer ones are split across the agents), verifies proportionally, and
@@ -161,7 +164,7 @@ Detection never fails loudly — an undetected value comes back empty and the ho
 ## Development
 
 ```bash
-./test.sh                      # 671 assertions against throwaway fixtures
+./test.sh                      # 676 assertions against throwaway fixtures
 ./test.sh -v                   # ...and print each one
 bash evals/run.sh --reference  # free: proves the eval checks against a real Laravel 13 app (5/5)
 bash evals/run.sh              # real agent runs (API spend) — compare evals/results/ across changes
@@ -181,11 +184,11 @@ before installing: they are in `.claude/hooks/` and listed in "The hooks" above.
   Your own formatter (Pint or Prettier) rewrites files Claude edits.
 - **Runs your commands:** the project's own test, lint, static-analysis and asset-build commands
   when a task is verified.
-- **Git:** `git-sync.sh` commits, pulls and pushes only when you type `/laravel:sync`, and
+- **Git:** `git-sync.sh` commits, pulls and pushes only when you type `/lw:sync`, and
   `run-tasks.sh --checkpoint` makes local commits on a new branch. Claude is blocked from pushing
   on its own.
 - **Network:** none of its own. It makes no HTTP requests and sends no telemetry. The only network
-  traffic is git talking to your configured remote during `/laravel:sync`, and whatever your own
+  traffic is git talking to your configured remote during `/lw:sync`, and whatever your own
   project commands do.
 - **Limits:** the guards slow accidents down; they are not a security boundary. Keep production
   secrets out of the project folder, or use Claude Code's sandbox.

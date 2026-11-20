@@ -60,6 +60,6 @@ One dev per feature folder. Inside a feature, work in four lanes that do not con
 
 ## Hand-off to the task runner
 
-A plan is read by people; tasks are run by the runner. `/laravel:write-task` loads this skill and then creates one draft task per layer file (never for the BRD), each with a `plan:` line pointing at its file. Devs run `/laravel:task <feature> <layer>`; `/laravel:plan-status` shows progress per wave. Status lives in the runner only, so the plan files never go stale. Used outside that command, end the report by telling the user to run `/laravel:write-task` on the plan.
+A plan is read by people; tasks are run by the runner. `/lw:write-task` loads this skill and then creates one draft task per layer file (never for the BRD), each with a `plan:` line pointing at its file. Devs run `/lw:task <feature> <layer>`; `/lw:plan-status` shows progress per wave. Status lives in the runner only, so the plan files never go stale. Used outside that command, end the report by telling the user to run `/lw:write-task` on the plan.
 
 Plans are drafts for people to read. Do not mark anything approved, and do not commit or push; say where the files are.

@@ -93,7 +93,7 @@ A layer file is split into **small tasks** of about 30 to 90 minutes and at most
 - **Id** `F<feature>.<layer>.<task>`: feature number, layer file number, task number, two digits each. The id is how people say "I'm on F02.03.01".
 - **The path** goes above the code block in backticks, never as a comment inside the code. The code carries no comments.
 - **Code** is the complete file: no TODOs, no pseudocode, no "similar to above", no "rest of the class". A task that needs more than three files is split.
-- **Status** (todo, in-progress, in-review, done, blocked) is not written in the header. It lives in the task runner (`tasks.sh`), one source of truth, so it cannot disagree with the plan. `/laravel:plan-status` shows it per wave.
+- **Status** (todo, in-progress, in-review, done, blocked) is not written in the header. It lives in the task runner (`tasks.sh`), one source of truth, so it cannot disagree with the plan. `/lw:plan-status` shows it per wave.
 - **Verify** is one exact command that fails if the task is wrong.
 
 Short layers (a security checklist) can have one task, long ones (Model) several: one for the enum, one for the model and trait, one for observer and policy, one for the factory.

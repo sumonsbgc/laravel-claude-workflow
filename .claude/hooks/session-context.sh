@@ -22,7 +22,7 @@ fi
 if [ -n "${BOOST:-}" ]; then
   VERREF="$VERREF Laravel Boost $BOOST is installed${BOOST_MCP:+ (MCP server in .mcp.json)}: use its tools (mcp__laravel-boost__*): search-docs before relying on memory for any API (it overrides the skill), database-schema instead of reading migrations, last-error/read-log-entries when something fails, browser-logs for frontend errors.${AI_RULES:+ Project rules live in .ai/rules — read .ai/rules/index.md before editing a matching path.}"
 else
-  VERREF="$VERREF Laravel Boost is not installed (first-party MCP: version-matched docs, DB schema, error logs) — /laravel:setup can recommend it."
+  VERREF="$VERREF Laravel Boost is not installed (first-party MCP: version-matched docs, DB schema, error logs) — /lw:setup can recommend it."
 fi
 
 CSS="none"
@@ -78,7 +78,7 @@ if [ -n "$TDIR" ] && [ -d "$ROOT/$TDIR" ] && [ -x "$SELF_DIR/tasks.sh" ]; then
   [ "${BLOCKED:-0}" -gt 0 ] 2>/dev/null && PARTS="${PARTS:+$PARTS, }$BLOCKED blocked"
   [ "${REVIEW:-0}" -gt 0 ] 2>/dev/null  && PARTS="${PARTS:+$PARTS, }$REVIEW awaiting the user's check (accept)"
   [ -n "$PARTS" ] && TASKS="
-- Tasks: $PARTS — \`/laravel:task\` runs the next one, \`/laravel:task list\` shows them all."
+- Tasks: $PARTS — \`/lw:task\` runs the next one, \`/lw:task list\` shows them all."
   if CLAUDE_PROJECT_DIR="$ROOT" wf_approval_off; then
     TASKS="$TASKS
 - Approval is off (REQUIRE_APPROVAL=off in .claude/workflow.conf): new tasks are written as todo, drafts run without \`approve\`, and UNVERIFIED work closes as done. Never stop to ask the user to approve or accept."
@@ -91,10 +91,10 @@ if git -C "$ROOT" rev-parse --git-dir >/dev/null 2>&1; then
   STAGE_NOW="$(CLAUDE_PROJECT_DIR="$ROOT" bash "$SELF_DIR/git-sync.sh" stage 2>/dev/null | head -n 1)"
   if [[ "$STAGE_NOW" =~ ^[A-Za-z0-9._/-]+$ ]]; then
     GITLINE="
-- Git: stage branch \`$STAGE_NOW\`. Pushing goes only through \`bash $HELPERS/git-sync.sh push\`, after \`git-sync.sh sync\` has pulled the stage branch in; the user starts it with /laravel:sync."
+- Git: stage branch \`$STAGE_NOW\`. Pushing goes only through \`bash $HELPERS/git-sync.sh push\`, after \`git-sync.sh sync\` has pulled the stage branch in; the user starts it with /lw:sync."
   else
     GITLINE="
-- Git: no stage branch configured yet — /laravel:sync asks the user for it. Pushing goes only through git-sync.sh, started by the user with /laravel:sync."
+- Git: no stage branch configured yet — /lw:sync asks the user for it. Pushing goes only through git-sync.sh, started by the user with /lw:sync."
   fi
 fi
 

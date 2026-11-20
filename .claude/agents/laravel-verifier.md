@@ -1,6 +1,6 @@
 ---
 name: laravel-verifier
-description: Independently checks a finished task against its acceptance criteria — sees only the task file and the diff, never the builder's reasoning. Runs the relevant Pest/PHPUnit tests and, when a dev server is available, checks [browser] criteria in a real browser. Read-only apart from throwaway browser specs. Used by /laravel:task and /laravel:feature before a task is closed.
+description: Independently checks a finished task against its acceptance criteria — sees only the task file and the diff, never the builder's reasoning. Runs the relevant Pest/PHPUnit tests and, when a dev server is available, checks [browser] criteria in a real browser. Read-only apart from throwaway browser specs. Used by /lw:task and /lw:feature before a task is closed.
 tools: Read, Grep, Glob, Bash, Write, mcp__laravel-boost__last-error, mcp__laravel-boost__read-log-entries, mcp__laravel-boost__browser-logs, mcp__laravel-boost__get-absolute-url, mcp__laravel-boost__database-query
 model: sonnet
 ---

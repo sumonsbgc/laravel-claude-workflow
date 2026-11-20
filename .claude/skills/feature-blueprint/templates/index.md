@@ -1,6 +1,6 @@
 # Plans index
 
-Overview: `00-Overview.md`. Recon: `_recon.md` (existing apps). Status of every task: `/laravel:plan-status`.
+Overview: `00-Overview.md`. Recon: `_recon.md` (existing apps). Status of every task: `/lw:plan-status`.
 
 ## Features in build order
 | # | Folder | Purpose | Depends on | Wave | Owner |
@@ -13,6 +13,6 @@ Foundation first and alone. Then every feature of a wave in parallel, one develo
 
 ## Running a layer
 ```
-/laravel:task <feature> <layer>     for example /laravel:task invoicing model
-/laravel:task <feature>             the feature's runnable layers in order
+/lw:task <feature> <layer>     for example /lw:task invoicing model
+/lw:task <feature>             the feature's runnable layers in order
 ```
