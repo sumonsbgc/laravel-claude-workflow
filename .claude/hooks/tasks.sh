@@ -120,7 +120,9 @@ state_set() { # state_set <id> <key> <value>
 }
 # approve and accept are the user's decisions; Claude Code sets CLAUDECODE=1 in its Bash tool.
 users_step() {
+  wf_approval_off && return 0
   [ "${CLAUDECODE:-}" = 1 ] && die "tasks.sh $1 is the user's step — run it in your own terminal, not through Claude"
+  [ -t 0 ] || die "tasks.sh $1 is the user's step — run it in your own terminal (it needs an interactive one)"
   return 0
 }
 
@@ -208,9 +210,13 @@ case "$CMD" in
     printf '%s\n' "$FM" | grep -qE "^id:[[:space:]]*['\"]?${NID}['\"]?[[:space:]]*$" || die "frontmatter id must be $NID"
     printf '%s\n' "$FM" | grep -qE '^status:[[:space:]]*draft[[:space:]]*$' || die "new tasks are drafts: set status: draft"
     mkdir -p "$DIR" || die "cannot create $TASKS_REL"
-    OUT="$DIR/$NAME.md"
+    OUT="$DIR/$NAME.md"; NEW_STATUS=draft
+    if wf_approval_off; then
+      NEW_STATUS=todo
+      BODY="$(printf '%s\n' "$BODY" | awk '!d && /^status:[[:space:]]*draft[[:space:]]*$/ { print "status: todo"; d = 1; next } 1')"
+    fi
     printf '%s\n' "$BODY" > "$OUT.tmp.$$" && mv "$OUT.tmp.$$" "$OUT" || { rm -f "$OUT.tmp.$$"; die "could not write $OUT"; }
-    echo "wrote $TASKS_REL/$NAME.md (draft)"
+    echo "wrote $TASKS_REL/$NAME.md ($NEW_STATUS)"
     ;;
 
   migrate)
@@ -258,7 +264,11 @@ case "$CMD" in
     done
     for f in "$DIR"/*.md; do
       is_task "$f" || continue
-      [ "$(task_status "$f")" = todo ] || continue
+      case "$(task_status "$f")" in
+        todo) ;;
+        draft) wf_approval_off || continue ;;
+        *) continue ;;
+      esac
       deps_done "$f" || continue
       printf '%s\n' "$f"; exit 0
     done
@@ -318,7 +328,7 @@ case "$CMD" in
 
   start)
     f="$(find_task "${1:?id}")" || die "no task with id $1"
-    [ "$(task_status "$f")" = draft ] && die "task $1 is still a draft — review it, then: tasks.sh approve $1"
+    [ "$(task_status "$f")" = draft ] && ! wf_approval_off && die "task $1 is still a draft — review it, then: tasks.sh approve $1"
     set_status "$f" doing
     mkdir -p "$STATE"
     BASE="none"
@@ -380,8 +390,9 @@ case "$CMD" in
         *) die "task $ID: no verdict recorded — verify it first (can-skip-verify, else laravel-verifier), then: tasks.sh verdict $ID <result>" ;;
       esac
     fi
-    END="done"; [ "$VERDICT" = UNVERIFIED ] && END=review
+    END="done"; [ "$VERDICT" = UNVERIFIED ] && ! wf_approval_off && END=review
     set_status "$f" "$END"; append_log "$f" "$*"
+    [ "$VERDICT" = UNVERIFIED ] && [ "$END" = done ] && append_log "$f" "closed with UNVERIFIED criteria (REQUIRE_APPROVAL=off)"
     # Remember what this task touched, so dependent tasks get it from `context` instead of re-reading.
     [ -n "$PATHS" ] && printf '%s\n' "$PATHS" > "$STATE/$ID.files"
     wf_metric task_close id "$ID" size "$(task_size "$f")" seconds "$SECS" files "$FILES"

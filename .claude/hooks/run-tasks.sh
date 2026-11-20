@@ -77,7 +77,7 @@ while :; do
   ST="$(task_field "$P" status)"
   case "$ST" in
     done|review) N=$((N+1)); continue ;;
-    draft) echo "task $ID is a draft — approve it first: bash $(wf_helpers "$SELF_DIR")/tasks.sh approve $ID"; break ;;
+    draft) wf_approval_off || { echo "task $ID is a draft — approve it first: bash $(wf_helpers "$SELF_DIR")/tasks.sh approve $ID"; break; } ;;
   esac
   [ "$ID" = "$LAST" ] && { echo "task $ID did not finish on the previous run — stopping to avoid a loop"; break; }
   LAST="$ID"

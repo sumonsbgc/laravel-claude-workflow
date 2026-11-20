@@ -38,9 +38,9 @@ TQ="'"; FIRST="${CMD%%$'\n'*}"
 if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [[ "$FIRST" == *"bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/tasks.sh new "* ]]; then
   FIRST="${FIRST/"bash $CLAUDE_PLUGIN_ROOT/.claude/hooks/tasks.sh"/bash .claude/hooks/tasks.sh}"
 fi
-if [[ "$FIRST" =~ ^[[:space:]]*bash[[:space:]]+(~/|\./)?\.claude/hooks/tasks\.sh[[:space:]]+new[[:space:]]+[0-9]{3,}-[a-z0-9-]+[[:space:]]+\<\<[[:space:]]*($TQ([A-Za-z_]+)$TQ|\"([A-Za-z_]+)\")[[:space:]]*$ ]]; then
+if [[ "$CMD" != *[$'\r\v\f']* ]] && [[ "$FIRST" =~ ^[\ $'\t']*bash[\ $'\t']+(~/|\./)?\.claude/hooks/tasks\.sh[\ $'\t']+new[\ $'\t']+[0-9]{3,}-[a-z0-9-]+[\ $'\t']*\<\<[\ $'\t']*($TQ([A-Za-z_]+)$TQ|\"([A-Za-z_]+)\")$ ]]; then
   TAG="${BASH_REMATCH[3]}${BASH_REMATCH[4]}"
-  BODY="${CMD#*$'\n'}"; BODY="${BODY%"${BODY##*[![:space:]]}"}"   # drop trailing blank lines
+  BODY="${CMD#*$'\n'}"; BODY="${BODY%"${BODY##*[!$'\n']}"}"
   if [ "$BODY" != "$CMD" ] && [ "${BODY##*$'\n'}" = "$TAG" ] && [ "$(grep -cxF -- "$TAG" <<<"$BODY")" = 1 ]; then exit 0; fi
 fi
 
@@ -132,20 +132,24 @@ SHELL_GLOBS=1
 set -f
 for w in $NORM; do
   case "$w" in *'*'*|*'?'*|*'['*) ;; *) continue ;; esac
-  b="${w##*/}"
+  b="${w##*/}"; W_SHELL_GLOBS="$SHELL_GLOBS"
+  if [[ "$b" == *'('* ]]; then
+    b="$(sed -E 's/[@!+?*]?\([^)]*\)?/*/g' <<<"$b")"; W_SHELL_GLOBS=0
+  fi
   for cand in .env .env.local .env.production .env.development .env.testing id_rsa id_ed25519 id_ecdsa server.pem oauth-private.key auth.json; do
     # The two shortcuts below assume SHELL globbing. Tools with their own matchers (find -name/-path,
     # rg -g, grep --include, git pathspecs, tar/rsync filters) let `*` match dotfiles and any depth,
     # and dotglob/GLOBIGNORE change the shell's rules; after cd/pushd the directory the filesystem
     # check looks in is no longer the one the glob runs in. With any of those, every match blocks.
-    if [ "$SHELL_GLOBS" = 1 ]; then
+    if [ "$W_SHELL_GLOBS" = 1 ]; then
     # Shell globs never match a leading dot unless the pattern starts with one (dotglob is off),
     # so `ls src/*` cannot reach .env; only `.e*`-style patterns can.
     case "$cand" in .*) [[ "$b" == .* ]] || continue ;; esac
     # A bare wildcard (`*`, `*.*`) is just "all files": it reaches a key only if one is really
     # there, so ask the filesystem (globbing the directory part too) instead of blocking `ls *`.
-    if [[ "$cand" != .* ]] && [[ "$b" =~ ^[*?.]+$ ]]; then
-      d="${w%/*}"; [ "$d" = "$w" ] && d="."; d="${d/#\~/$HOME}"
+    d="${w%/*}"; [ "$d" = "$w" ] && d="."
+    if [[ "$cand" != .* ]] && [[ "$b" =~ ^[*?.]+$ ]] && [[ "${d#\~}" != *[\$\`\(\)\{\}\~]* ]]; then
+      d="${d/#\~/$HOME}"
       case "$d" in /*) ;; *) d="$HCWD/$d" ;; esac
       # shellcheck disable=SC2053
       [[ "$cand" == $b ]] && compgen -G "$d/$cand" >/dev/null 2>&1 && { HITS="$HITS $w"; break; }

@@ -26,6 +26,12 @@ wf_metric() {
   printf '%s}\n' "$line" >> "$root/.claude/.cache/metrics.jsonl" 2>/dev/null || true
 }
 
+wf_approval_off() {
+  local v="${LARAVEL_WF_REQUIRE_APPROVAL:-}" conf="${CLAUDE_PROJECT_DIR:-$PWD}/.claude/workflow.conf"
+  [ -z "$v" ] && [ -f "$conf" ] && v="$(sed -n 's/^REQUIRE_APPROVAL=//p' "$conf" | tail -n 1)"
+  [ "$v" = off ]
+}
+
 wf_helpers() {
   local root="${CLAUDE_PROJECT_DIR:-$PWD}"
   # shellcheck disable=SC2088

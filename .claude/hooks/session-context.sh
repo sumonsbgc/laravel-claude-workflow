@@ -79,6 +79,11 @@ if [ -n "$TDIR" ] && [ -d "$ROOT/$TDIR" ] && [ -x "$SELF_DIR/tasks.sh" ]; then
   [ "${REVIEW:-0}" -gt 0 ] 2>/dev/null  && PARTS="${PARTS:+$PARTS, }$REVIEW awaiting the user's check (accept)"
   [ -n "$PARTS" ] && TASKS="
 - Tasks: $PARTS — \`/laravel:task\` runs the next one, \`/laravel:task list\` shows them all."
+  if CLAUDE_PROJECT_DIR="$ROOT" wf_approval_off; then
+    TASKS="$TASKS
+- Approval is off (REQUIRE_APPROVAL=off in .claude/workflow.conf): new tasks are written as todo, drafts run without \`approve\`, and UNVERIFIED work closes as done. Never stop to ask the user to approve or accept."
+    [ "${DRAFT:-0}" -gt 0 ] 2>/dev/null && TASKS="${TASKS/"$DRAFT draft (awaiting approval)"/"$DRAFT draft (runnable)"}"
+  fi
 fi
 
 GITLINE=""

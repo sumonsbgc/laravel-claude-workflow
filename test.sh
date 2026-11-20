@@ -19,6 +19,13 @@ lacks()      { if grep -qF -- "$2" <<<"$1"; then bad "$3 (unexpectedly present: 
 section(){ printf '\n%s\n' "$1"; }
 # The suite stands in for the user's terminal, not a Claude Code session (approve/accept refuse there).
 unset CLAUDECODE
+on_tty() {
+  if script -qec true /dev/null </dev/null >/dev/null 2>&1; then
+    SHELL=/bin/bash script -qec "$(printf '%q ' "$@")" /dev/null </dev/null | tr -d '\r'
+  else
+    script -q /dev/null "$@" </dev/null | tr -d '\r'
+  fi
+}
 # Sections written before the verdict gate close tasks directly; the gate has its own section below.
 export LARAVEL_WF_REQUIRE_VERDICT=off
 
@@ -329,6 +336,19 @@ check "a draft heredoc to tasks.sh new may mention .env" "$(gsec "bash .claude/h
 check "a command after the heredoc still blocks" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'TASK'${NL}x${NL}TASK${NL}cat .env")" "2"
 check "an unquoted heredoc still blocks" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<TASK${NL}\$(cat .env)${NL}TASK")" "2"
 check "a heredoc into bash still blocks" "$(gsec "bash <<'TASK'${NL}cat .env${NL}TASK")" "2"
+check "a carriage return can't shift the draft terminator (secrets)" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'T'"$'\r'"${NL}T"$'\r'"${NL}cat .env${NL}T")" "2"
+check "a vertical tab in the draft line is not whitespace (secrets)" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'T'"$'\v'"${NL}never commit .env${NL}T")" "2"
+check "text after the draft delimiter is scanned (secrets)" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'T' ; cat .env${NL}x${NL}T")" "2"
+check "a trailing-space terminator line stays data, as in bash (secrets)" "$(gsec "bash .claude/hooks/tasks.sh new 001-x <<'T'${NL}T ${NL}cat .env${NL}T")" "0"
+check "a bare * under a command-substituted folder blocks" "$(gsec 'cat $(echo keys)/*')" "2"
+check "a bare * under a backtick folder blocks" "$(gsec 'cat `echo keys`/*')" "2"
+check "a bare * under a variable folder blocks" "$(gsec 'cat $D/*')" "2"
+check "a bare * under a braced folder blocks" "$(gsec 'cat {keys,src}/*')" "2"
+check "a zsh glob qualifier (D) blocks" "$(gsec 'cat *(D)')" "2"
+check "a zsh glob qualifier (N) on a folder blocks" "$(gsec 'cat src/*(N)')" "2"
+check "an extglob blocks" "$(gsec 'cat @(.e*)')" "2"
+check "a bare * under a plain folder with no key is still allowed" "$(gsec 'ls src/*')" "0"
+check "a bare * under ~/ with no key is still allowed" "$(HOME="$GP/src" gsec 'ls ~/*')" "0"
 raw() { CLAUDE_PROJECT_DIR="$1" LARAVEL_WF_NO_CACHE=1 LARAVEL_WF_FILE="$2" LARAVEL_WF_RAW=1 bash "$H/$3" 2>&1; }
 rawrc() { CLAUDE_PROJECT_DIR="$1" LARAVEL_WF_NO_CACHE=1 LARAVEL_WF_FILE="$2" LARAVEL_WF_RAW=1 bash "$H/$3" >/dev/null 2>&1; echo $?; }
 
@@ -490,7 +510,7 @@ printf -- '---\nid: 001\ntitle: Base\nstatus: draft\nsize: small\n---\n## Accept
 lacks "$(bash "$H/tasks.sh" list)" "footer-plan" "notes without frontmatter are not tasks"
 contains "$(bash "$H/tasks.sh" next 2>&1)" "no runnable task" "drafts don't run"
 bash "$H/tasks.sh" start 001 >/dev/null 2>&1; check "start refuses a draft" "$?" "1"
-bash "$H/tasks.sh" approve all >/dev/null
+on_tty bash "$H/tasks.sh" approve all >/dev/null
 printf 'scratch\n' > "$K/notes.txt"
 bash "$H/tasks.sh" start 001 >/dev/null; printf '<?php // a\n' > "$K/app/A.php"
 contains "$(bash "$H/tasks.sh" can-skip-verify 001)" "yes" "tiny all-[review] task may skip the verifier"
@@ -685,7 +705,10 @@ mkt 101 First draft "[browser] it shows"
 mkt 102 Second todo "[browser] it shows" 101
 contains "$(CLAUDECODE=1 gt approve 101)" "user's step" "approve refuses inside Claude Code"
 contains "$(gt show 101)" "status: draft" "the draft stays a draft"
-gt approve 101 >/dev/null; contains "$(gt show 101)" "status: todo" "approve works from the user's terminal"
+contains "$(gt approve 101 </dev/null)" "interactive" "approve refuses without a terminal even when CLAUDECODE is unset"
+contains "$(gt show 101)" "status: draft" "so an unset CLAUDECODE alone approves nothing"
+gtt() { on_tty env CLAUDE_PROJECT_DIR="$V" LARAVEL_WF_REQUIRE_VERDICT=on bash "$H/tasks.sh" "$@" 2>&1; }
+gtt approve 101 >/dev/null; contains "$(gt show 101)" "status: todo" "approve works from the user's terminal"
 gt start 101 >/dev/null; echo b > "$V/b.txt"
 contains "$(gt close 101 built)" "no verdict recorded" "close refuses without a verdict"
 contains "$(gt show 101)" "status: doing" "and the task is still doing"
@@ -698,11 +721,32 @@ contains "$(gt close 101 'built; UNVERIFIED [browser]: it shows')" "tasks.sh acc
 contains "$(gt show 101)" "status: review" "UNVERIFIED lands in review, not done"
 contains "$(gt next)" "no runnable task" "dependents wait for the accept"
 contains "$(CLAUDECODE=1 gt accept 101)" "user's step" "accept refuses inside Claude Code"
-gt accept 101 >/dev/null; contains "$(gt show 101)" "status: done" "accept moves review to done"
+contains "$(gt accept 101 </dev/null)" "interactive" "accept refuses without a terminal"
+gtt accept 101 >/dev/null; contains "$(gt show 101)" "status: done" "accept moves review to done"
 contains "$(gt show 101)" "accepted by the user" "and logs it"
 contains "$(gt next)" "102-t.md" "then the dependent runs"
 gt start 102 >/dev/null; gt verdict 102 PASS 1 >/dev/null; gt close 102 "built it" >/dev/null
 contains "$(gt show 102)" "status: done" "PASS closes to done"
+
+A="$TMP/noapprove"; gproj "$A"
+CLAUDE_PROJECT_DIR="$A" bash "$H/tasks.sh" init >/dev/null 2>&1
+printf 'REQUIRE_APPROVAL=off\n' >> "$A/.claude/workflow.conf"
+at() { CLAUDE_PROJECT_DIR="$A" LARAVEL_WF_REQUIRE_VERDICT=on bash "$H/tasks.sh" "$@" 2>&1; }
+contains "$(printf -- '---\nid: 201\ntitle: X\nstatus: draft\n---\n## Acceptance\n- [ ] [browser] x\n' | at new 201-x)" "(todo)" "approval off: new writes a todo task"
+contains "$(at show 201)" "status: todo" "approval off: the file says todo"
+printf -- '---\nid: 202\ntitle: Old draft\nstatus: draft\ndepends: 201\n---\n## Acceptance\n- [ ] [browser] y\n\n## Log\n' > "$A/.claude/tasks/202-y.md"
+contains "$(at next)" "201-x.md" "approval off: next picks the todo first"
+at start 201 >/dev/null; echo a > "$A/a.txt"; at verdict 201 UNVERIFIED 1 >/dev/null; at close 201 built >/dev/null
+contains "$(at show 201)" "status: done" "approval off: UNVERIFIED closes to done"
+contains "$(at show 201)" "closed with UNVERIFIED criteria" "approval off: and says so in the log"
+contains "$(at next)" "202-y.md" "approval off: a draft is runnable once its deps are done"
+lacks "$(at start 202)" "still a draft" "approval off: start accepts a draft"
+contains "$(CLAUDECODE=1 at approve all </dev/null)" "approved" "approval off: approve runs inside Claude Code"
+check "approval off: the owner guard lets approve through" "$(printf '{"tool_input":{"command":"bash .claude/hooks/tasks.sh approve all"}}' | CLAUDE_PROJECT_DIR="$A" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "0"
+check "approval off: the owner guard still blocks git push" "$(printf '{"tool_input":{"command":"git push"}}' | CLAUDE_PROJECT_DIR="$A" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "2"
+contains "$(CLAUDE_PROJECT_DIR="$A" bash "$H/session-context.sh")" "Approval is off" "approval off: the session report says so"
+check "approval on elsewhere: the owner guard still blocks approve" "$(printf '{"tool_input":{"command":"bash .claude/hooks/tasks.sh approve all"}}' | CLAUDE_PROJECT_DIR="$V" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "2"
+check "LARAVEL_WF_REQUIRE_APPROVAL=off works without the conf line" "$(printf '{"tool_input":{"command":"bash .claude/hooks/tasks.sh approve all"}}' | LARAVEL_WF_REQUIRE_APPROVAL=off CLAUDE_PROJECT_DIR="$V" bash "$H/guard-owner.sh" >/dev/null 2>&1; echo $?)" "0"
 mkt 103 Third todo "[review] it reads well"
 gt start 103 >/dev/null; echo c >> "$V/composer.json"
 gt can-skip-verify 103 >/dev/null; gt verdict 103 SKIPPED 1 >/dev/null; gt close 103 tiny >/dev/null
@@ -713,7 +757,9 @@ own() { printf '{"tool_input":{"command":%s}}' "$(printf '%s' "$1" | jq -Rs .)" 
 for c in 'git push' 'git push origin main' 'cd app && git -C .. push -u origin x' '"git" push' '/usr/bin/git push' 'git -c a=b push' 'gh pr create --fill' 'gh pr merge 3' \
          'bash .claude/hooks/tasks.sh approve all' 'bash $T approve 001' 'bash ~/.claude/hooks/tasks.sh accept 001' \
          "sed -i 's/status: draft/status: todo/' .claude/tasks/001-x.md" 'echo status: todo > .claude/tasks/001-x.md' \
-         'sudo -u x git push' 'timeout 30 git push' 'sh -c "git push"' "$(printf "bash <<'EOF'\ngit push\nEOF")" \
+         'bash ./${T}.sh approve 001' 'bash x/`echo tasks`.sh accept 001' 'env -u CLAUDECODE bash .claude/hooks/tasks.sh approve all' \
+         'script -qec "bash .claude/hooks/tasks.sh approve all" /dev/null' 'FOO=$x bash .claude/hooks/tasks.sh approve all' \
+         'sudo -u x git push' 'timeout 30 git push' 'sh -c "git push"'"$(printf "bash <<'EOF'\ngit push\nEOF")" \
          "$(printf "cat <<EOF > f\nx\nEOF\ngit push")"; do
   check "owner guard blocks: $c" "$(own "$c")" "2"
 done

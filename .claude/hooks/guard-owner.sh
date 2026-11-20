@@ -89,13 +89,18 @@ while IFS= read -r SEG; do
       *git-sync.sh)
         [ "${W[$((i + 1))]:-}" = push ] && check_sync_push
         CP=0 ;;
-      *tasks.sh|\$*)
-        [[ "$w" == \$* ]] && [ "${W[$((i + 1))]:-}" = push ] && check_sync_push
-        if [[ "${W[$((i + 1))]:-}" =~ ^(approve|accept)$ ]]; then
-          block "tasks.sh ${W[$((i + 1))]} is the user's step: they approve drafts after reading them, and accept work whose [browser] criteria nobody could check. Tell the user which task is waiting and ask them to run: bash $(wf_helpers "$SELF_DIR")/tasks.sh ${W[$((i + 1))]} <id>"
+      [A-Za-z_]*=*) ;;
+      *tasks.sh|*\$*|*\`*)
+        j=$((i + 1))
+        if [[ "$w" == *[\$\`]* ]]; then
+          while [ "$j" -lt "$n" ] && [[ "${W[$j]}" == *[\$\`]* ]]; do j=$((j + 1)); done
+          [ "${W[$j]:-}" = push ] && check_sync_push
+        fi
+        if [[ "${W[$j]:-}" =~ ^(approve|accept)$ ]] && ! wf_approval_off; then
+          block "tasks.sh ${W[$j]} is the user's step: they approve drafts after reading them, and accept work whose [browser] criteria nobody could check. Tell the user which task is waiting and ask them to run: bash $(wf_helpers "$SELF_DIR")/tasks.sh ${W[$j]} <id>"
         fi
         CP=0 ;;
-      sudo|env|xargs|nice|timeout|nohup|*/env) WRAP=1 ;;   # their option values look like words: keep scanning
+      sudo|env|xargs|nice|timeout|nohup|script|unbuffer|setsid|stdbuf|*/env|*/script) WRAP=1 ;;   # their option values look like words: keep scanning
       command|exec|time|builtin|then|do|else|if|while|until|!|source|.) ;;
       bash|sh|zsh|dash|ksh|*/bash|*/sh|*/zsh) ;;
       -*|[0-9]*|*=*) ;;                   # options, timeout's duration, VAR=value

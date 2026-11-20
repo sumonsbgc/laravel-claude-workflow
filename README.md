@@ -48,6 +48,11 @@ Claude is always blocked; `/laravel:sync` commits, runs `git-sync.sh sync` (merg
 in, stops on conflicts), checks, then `git-sync.sh push`, which refuses a branch that doesn't
 contain the stage branch's latest commit.
 
+To skip your review steps, add `REQUIRE_APPROVAL=off` to `.claude/workflow.conf`: the planner
+writes tasks as `todo`, existing drafts run without `approve`, and work with unverifiable
+`[browser]` criteria closes as `done` (noted in its log) instead of waiting for `accept`. The
+independent verifier still runs, and pushing still needs `/laravel:sync`.
+
 ## Why it exists
 
 A general-purpose agent writing Laravel makes the same handful of expensive mistakes, over and
@@ -120,6 +125,7 @@ LARAVEL_WF_EDITOR_GUARD=off         LARAVEL_WF_SECRETS_GUARD=off
 LARAVEL_WF_COMMENT_GUARD=off        LARAVEL_WF_STAGE_BRANCH=stage    LARAVEL_WF_SYNC_MODE=merge|rebase
 LARAVEL_WF_CHECKPOINT=commit        LARAVEL_WF_DEV_URL=http://localhost:8000
 LARAVEL_WF_METRICS=off              LARAVEL_WF_NO_CACHE=1     LARAVEL_WF_TASKS_DIR=.claude/tasks
+LARAVEL_WF_REQUIRE_APPROVAL=off
 ```
 
 ## The task runner

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.5.0 — 2026-11-11
+- **Approval can be switched off.** `REQUIRE_APPROVAL=off` in `.claude/workflow.conf` (or `LARAVEL_WF_REQUIRE_APPROVAL=off` in the environment) removes both user steps: `tasks.sh new` writes `status: todo` instead of `draft`, `next` and `start` take drafts whose dependencies are done, `close` after an `UNVERIFIED` verdict ends in `done` with a log line saying so instead of `review`, and `approve`/`accept` run anywhere, so the owner guard no longer blocks them. `run-tasks.sh` runs drafts instead of stopping on them, and the session report says approval is off so Claude never stops to ask. Unchanged: the verifier and the verdict gate, the ban on shell edits of a task's `status:` line, and the push rule.
+
+## 2.4.6 — 2026-11-11
+Fixes from an automated security review of 2.4.5.
+- guard-secrets' task-draft exception now matches the way guard-owner's does: literal spaces and tabs only, any `\r`, `\v` or `\f` in the command refuses it, nothing may follow the closing quote of the delimiter, and only trailing newlines are trimmed. Before, `[[:space:]]` accepted `\r` after the delimiter, so bash's terminator became `TAG\r` and a middle `TAG\r` line ended the heredoc early in bash but not in the guard.
+- guard-secrets asks the filesystem about a bare wildcard (`cat dir/*`) only when the folder part is plain text (a leading `~` is fine). A folder with `$`, backticks, parentheses, braces or another `~` names a different place for the shell than for the check, so every secret name matches and it blocks. A word with a zsh glob qualifier or extglob (`*(D)`, `src/*(N)`, `@(.e*)`) turns the group into `*` and skips the shell-glob shortcuts: `(D)` matches dotfiles.
+- `tasks.sh approve` and `accept` also need stdin to be a terminal, not just `CLAUDECODE` unset (any command can unset it). The owner guard stays the main barrier: it now sees past a command word built with `$` or backticks anywhere in it (`./${T}.sh approve`, `` x/`echo tasks`.sh accept ``), still lets `VAR=$x` assignments keep the command position open, and treats `script`, `unbuffer`, `setsid` and `stdbuf` as wrappers, so `script -qec "tasks.sh approve all"` (a fake terminal) is blocked too.
+
 ## 2.4.5 — 2026-10-30
 - guard-owner's task-draft exception matches only literal spaces and tabs, refuses any command containing `\r`, `\v` or `\f`, and trims only trailing newlines before comparing lines byte for byte. A `\r` after the delimiter made bash's terminator `TAG\r`, so a middle `TAG\r` line ended the heredoc early in bash but not in the guard (automated security review).
 
