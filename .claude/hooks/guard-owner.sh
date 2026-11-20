@@ -93,8 +93,13 @@ while IFS= read -r SEG; do
         [ "${W[$((i + 1))]:-}" = push ] && check_sync_push
         CP=0 ;;
       [A-Za-z_]*=*)
-        if [[ "$w" == *tasks.sh ]] && [[ "${W[$((i + 1))]:-}" =~ ^(approve|accept)$ ]] && ! wf_approval_off; then
-          refuse_approve "${W[$((i + 1))]}"
+        if [[ "$w" == *tasks.sh || "$w" == *[\$\`]* ]]; then
+          j=$((i + 1))
+          while [ "$j" -lt "$n" ] && [[ "${W[$j]}" == *[\$\`]* ]]; do j=$((j + 1)); done
+          [[ "$w" == *[\$\`]* ]] && [ "${W[$j]:-}" = push ] && check_sync_push
+          if [[ "${W[$j]:-}" =~ ^(approve|accept)$ ]] && ! wf_approval_off; then
+            refuse_approve "${W[$j]}"
+          fi
         fi ;;
       *tasks.sh|*\$*|*\`*)
         j=$((i + 1))

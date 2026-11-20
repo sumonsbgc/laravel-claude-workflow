@@ -166,7 +166,7 @@ Detection never fails loudly — an undetected value comes back empty and the ho
 ## Development
 
 ```bash
-./test.sh                      # 691 assertions against throwaway fixtures
+./test.sh                      # 703 assertions against throwaway fixtures
 ./test.sh -v                   # ...and print each one
 bash evals/run.sh --reference  # free: proves the eval checks against a real Laravel 13 app (5/5)
 bash evals/run.sh              # real agent runs (API spend) — compare evals/results/ across changes

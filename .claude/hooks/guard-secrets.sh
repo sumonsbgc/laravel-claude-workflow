@@ -156,12 +156,21 @@ glob_hits_secret() {
   done
   return 1
 }
+group_wildcards() {
+  local g="$1" prev="" n=0
+  while [ "$g" != "$prev" ] && [ "$n" -lt 32 ]; do
+    prev="$g"; n=$((n + 1))
+    g="$(sed -E 's/[@!+?*]?\([^()]*\)/*/g' <<<"$g")"
+  done
+  g="${g//[()]/*}"
+  printf '%s' "$g"
+}
 shopt -s extglob
 set -f
 for w in $NORM; do
   case "$w" in
     *'*'*|*'?'*|*'['*|*'@('*|*'!('*|*'+('*) ;;
-    *'('*'|'*')'*) ;;
+    *'('*')'*) ;;
     *) continue ;;
   esac
   b="${w##*/}"
@@ -174,7 +183,13 @@ for w in $NORM; do
     fi
     if glob_hits_secret "$w" "$(sed -E 's/(^|[^@!+?*])\(/\1@(/g' <<<"$b")" 0; then HITS="$HITS $w"; continue; fi
     Q="$(sed -E 's/\([^()]*\)$//' <<<"$b")"
-    if [ -n "$Q" ] && glob_hits_secret "$w" "$Q" 0; then HITS="$HITS $w"; fi
+    if [ -n "$Q" ] && glob_hits_secret "$w" "$Q" 0; then HITS="$HITS $w"; continue; fi
+    if [[ "$b" == *'(#a'* ]]; then HITS="$HITS $w"; continue; fi
+    if [[ "$b" =~ \([^()]*[~^][^()]*\) ]] || [[ "$b" =~ \(#[A-Za-z] ]] || [[ "$b" == *')#'* ]]; then
+      shopt -s nocasematch
+      if glob_hits_secret "$w" "$(group_wildcards "$b")" 0; then HITS="$HITS $w"; fi
+      shopt -u nocasematch
+    fi
   elif glob_hits_secret "$w" "$b" "$SHELL_GLOBS"; then
     HITS="$HITS $w"
   fi
