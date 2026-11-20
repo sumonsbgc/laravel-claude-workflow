@@ -232,7 +232,7 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <table>
 <thead><tr><th>Slash command</th><th>Model</th><th>Use it to…</th></tr></thead>
 <tr><td><code>/lw:setup</code></td><td>current</td><td class="wrap">Connect the workflow to the project. Run once.</td></tr>
-<tr><td><code>/lw:write-task &lt;what&gt;</code></td><td>Opus</td><td class="wrap">Plan work into draft tasks. For a whole app or a multi-layer feature it uses the <code>feature-blueprint</code> skill (section 19). Never writes application code.</td></tr>
+<tr><td><code>/lw:write-task &lt;what&gt;</code></td><td>Opus</td><td class="wrap">Plan work into draft tasks. For a whole app or a multi-layer feature it uses the <code>feature-planner</code> skill (section 19). Never writes application code.</td></tr>
 <tr><td><code>/lw:task [id|all|list|feature layer]</code></td><td>Sonnet</td><td class="wrap">Build tasks: your main command. <code>/lw:task invoicing model</code> runs one layer of a planned feature.</td></tr>
 <tr><td><code>/lw:feature &lt;id|feature&gt;</code></td><td>Sonnet</td><td class="wrap">Force the full phased build (migration → model → route → view → tests → review). Accepts a planned feature's name.</td></tr>
 <tr><td><code>/lw:plan-status [feature]</code></td><td>Sonnet</td><td class="wrap">Progress of the planned features per wave: done, blocked, in review, and what can run next. Read-only.</td></tr>
@@ -397,7 +397,7 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 <table>
 <thead><tr><th>Change</th><th>What it means for you</th></tr></thead>
 <tr><td>New prefix: <code>lw</code> <span class="new">2.6</span></td><td class="wrap">All commands are now <code>/lw:*</code> (was <code>/laravel:*</code>), the plugin is <code>lw@laravel-workflow</code>, and only <code>/lw:sync</code> counts as your push go-ahead. Upgrading: plugin users uninstall <code>laravel@laravel-workflow</code> and install <code>lw@laravel-workflow</code>; file installs run <code>./install.sh</code> again, which removes the old <code>commands/laravel</code> folder.</td></tr>
-<tr><td>Plan with code <span class="new">2.6</span></td><td class="wrap">The <code>feature-blueprint</code> skill plans a whole app or a feature as a folder per feature and a file per layer, each with the full code, split into small tasks (section 19).</td></tr>
+<tr><td>Plan with code <span class="new">2.6</span></td><td class="wrap">The <code>feature-planner</code> skill plans a whole app or a feature as a folder per feature and a file per layer, each with the full code, split into small tasks (section 19).</td></tr>
 <tr><td>Two-stage planning <span class="new">2.6</span></td><td class="wrap">The overview and feature list come first and stop for your approval; per-feature files are written only after you say go.</td></tr>
 <tr><td>Pick one layer <span class="new">2.6</span></td><td class="wrap"><code>/lw:task invoicing model</code> runs one layer of a planned feature; <code>/lw:plan-status</code> shows progress per wave.</td></tr>
 <tr><td>BRD as PDF <span class="new">2.6</span></td><td class="wrap">Each feature's requirements are written as Markdown and rendered to a PDF to sign off.</td></tr>
@@ -426,10 +426,10 @@ bash .claude/hooks/run-tasks.sh 004 005 --budget 3          <span class="c"># ju
 bash evals/run.sh --reference      <span class="c"># free: every eval check can pass (must be 5/5)</span>
 bash evals/run.sh                  <span class="c"># 3 real agent runs (costs API money)</span></pre>
 <p>Results land in <code>evals/results/</code>. Compare them before and after changing any command, agent or skill. A change that lowers the pass rate or raises the cost is a regression.</p>
-<p>The planning skill has its own two test cases in <code>.claude/skills/feature-blueprint/evals/</code> (a new app, and a feature in an existing app). They are run with and without the skill and graded against fixed checks. In the last run the skill passed 17 of 17 checks and the plain model 9 of 17, one run each.</p>
+<p>The planning skill has its own two test cases in <code>.claude/skills/feature-planner/evals/</code> (a new app, and a feature in an existing app). They are run with and without the skill and graded against fixed checks. In the last run the skill passed 17 of 17 checks and the plain model 9 of 17, one run each.</p>
 
 <h2>19. Planning a whole app or feature, with code</h2>
-<p>For a small change, <code>/lw:write-task</code> writes one or two task files. For a whole application, or a feature that needs a schema, model, routes, views and tests, it uses the <b>feature-blueprint</b> skill and writes a plan you can hand to developers. The plan holds the real code, not a description of it.</p>
+<p>For a small change, <code>/lw:write-task</code> writes one or two task files. For a whole application, or a feature that needs a schema, model, routes, views and tests, it uses the <b>feature-planner</b> skill and writes a plan you can hand to developers. The plan holds the real code, not a description of it.</p>
 
 <h3>What gets written</h3>
 <pre>.claude/plans/

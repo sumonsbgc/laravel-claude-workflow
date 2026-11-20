@@ -93,7 +93,7 @@ file is written — not three days later.
                                      security, laravel13, testing, pitfalls)
               blade-conventions     (components, forms, alpine-and-assets, styling, block-editor)
               php-conventions       (types-and-structure, errors-and-exceptions)
-              feature-blueprint     (folder-layout, app-from-scratch, brd-template,
+              feature-planner     (folder-layout, app-from-scratch, brd-template,
                                      backend-templates, frontend-and-quality-templates)
   hooks/      session-context  post-edit (guard-php guard-blade guard-styles guard-editor format)
               bash-guard  guard-secrets  verify

@@ -45,7 +45,7 @@ scratch files can live in this folder and will be ignored by the runner.
 ## Plans for whole features and apps
 
 For a whole application, or a feature that spans layers, `/lw:write-task` uses the
-`feature-blueprint` skill: it writes a plan folder in `.claude/plans/<NN-feature>/` (BRD, migration,
+`feature-planner` skill: it writes a plan folder in `.claude/plans/<NN-feature>/` (BRD, migration,
 model, service, controller, view, test, verify, security, performance, each with its full code),
 then one draft task per layer file, titled `<feature> · <NN> <Layer>`, with `plan:` pointing at the
 layer file and `depends:` chaining the layers in order. Progress per wave: `/lw:plan-status`.

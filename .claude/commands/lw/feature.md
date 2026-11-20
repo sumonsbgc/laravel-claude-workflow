@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Grep, Glob, Bash, Task, TodoWrite, Skill
 
 Task id(s): **$ARGUMENTS**
 
-`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, `~/.claude/hooks` on a global install, or the plugin's folder). This command takes task ids, or the slug of a planned feature (`/lw:feature invoicing`), which expands to that feature's task ids in layer order (`bash $T list`, filtered on the slug). If the argument is empty or is a description instead of an id or a known feature, stop and tell the user to plan it first with `/lw:write-task <description>`, which uses the `feature-blueprint` skill to write the plan and one task per layer file.
+`T=<Kit helpers>/tasks.sh`, using the **Kit helpers** path from the session report (`.claude/hooks`, `~/.claude/hooks` on a global install, or the plugin's folder). This command takes task ids, or the slug of a planned feature (`/lw:feature invoicing`), which expands to that feature's task ids in layer order (`bash $T list`, filtered on the slug). If the argument is empty or is a description instead of an id or a known feature, stop and tell the user to plan it first with `/lw:write-task <description>`, which uses the `feature-planner` skill to write the plan and one task per layer file.
 
 `/lw:task` sends `size: large` tasks here on its own; running `/lw:feature <id>` directly forces the full build on a task of any size. The task-running rules in `/lw:task` — token discipline, skill table, verification, memory — apply here too.
 

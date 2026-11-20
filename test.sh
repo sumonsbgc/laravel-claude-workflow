@@ -70,7 +70,7 @@ hook_rc() { echo "{\"tool_input\":{\"file_path\":\"$2\"}}" | CLAUDE_PROJECT_DIR=
 section "kit layout"
 for f in install.sh test.sh README.md .claude/settings.json \
          .claude/hooks/{stack,session-context,tasks,format,verify,guard-php,guard-blade,guard-styles}.sh \
-         .claude/skills/{laravel-conventions,blade-conventions,php-conventions,feature-blueprint}/SKILL.md \
+         .claude/skills/{laravel-conventions,blade-conventions,php-conventions,feature-planner}/SKILL.md \
          templates/{task,tasks-readme,project-context}.md; do
   [ -f "$KIT/$f" ] && ok "exists: $f" || bad "missing: $f"
 done

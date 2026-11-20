@@ -1,5 +1,5 @@
 ---
-name: feature-blueprint
+name: feature-planner
 description: Plans a whole application from scratch, or one feature of an existing app, the way a Senior Architect or Principal Engineer starts it — a folder per feature under .claude/plans/ with one file per layer (BRD, migration, model, service, API contract, controller, view, jobs and events, test, security, performance, verify, rollout), each split into small tasks that carry the complete implementation code, so devs can be handed one feature or one layer each. Use whenever the user wants to plan, scope, break down, architect, blueprint, estimate or "write tasks, a BRD or specs for" a new app or a feature, or to split work between developers, even if they never say "plan". Plans only; never implements.
 ---
 
@@ -57,6 +57,15 @@ Templates for the documents themselves are in `templates/`: `overview.md`, `inde
 ## Dividing work between developers
 
 One dev per feature folder. Inside a feature, work in four lanes that do not conflict once the contract is agreed: **data** (02, 03), **domain** (04, 08), **delivery** (05, 06, 07), **quality** (09 to 12). Features in the same wave can run in parallel. The first merge is always the foundation or the feature everything else needs.
+
+## Using this skill on its own
+
+The skill ships inside the `lw` plugin, but it also works installed alone (from skills.sh, as a claude.ai upload, or copied into `~/.claude/skills/`). The parts that belong to the rest of the kit are optional, and the plan folders are written either way:
+
+- **No `laravel-conventions`, `php-conventions` or `blade-conventions` skills:** take the conventions from `_recon.md` and the repo's closest existing files. The production defaults above still apply.
+- **No `laravel-architect` agent, or no way to spawn agents:** plan the features yourself, one at a time, in wave order.
+- **No `/lw:*` commands or `tasks.sh`:** skip the task hand-off and the repo map, and read the code with `ls` and `grep`. End the report by saying the plan folder is the deliverable: each layer file can be handed to a developer as it is.
+- **No PDF skill:** leave the BRD as Markdown and say so.
 
 ## Hand-off to the task runner
 

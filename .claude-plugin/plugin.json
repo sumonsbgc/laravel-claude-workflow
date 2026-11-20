@@ -1,7 +1,7 @@
 {
   "name": "lw",
   "version": "2.6.0",
-  "description": "Laravel + Blade workflow: plan apps and features with code (feature-blueprint) or tasks with /lw:write-task, build them with /lw:task, independent verification, stack-aware guards and project memory.",
+  "description": "Laravel + Blade workflow: plan apps and features with code (feature-planner) or tasks with /lw:write-task, build them with /lw:task, independent verification, stack-aware guards and project memory.",
   "author": {
     "name": "Mohammad Sumon",
     "email": "sumonsbgc@gmail.com"

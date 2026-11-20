@@ -33,7 +33,7 @@ One feature in an existing app: write `_recon.md`, propose the feature split (on
 After approval, generate every feature in its wave order:
 
 - `00-foundation` first and alone, because everything else builds on its names and conventions.
-- Then each wave: features in the same wave do not depend on each other, so they are planned **in parallel, one `laravel-architect` agent per feature**. Brief each agent with: the feature slug, `00-Overview.md`, `_recon.md`, the foundation contract, the contract of any feature it depends on, and the `feature-blueprint` skill. When the session cannot spawn agents, plan features one at a time in wave order.
+- Then each wave: features in the same wave do not depend on each other, so they are planned **in parallel, one `laravel-architect` agent per feature**. Brief each agent with: the feature slug, `00-Overview.md`, `_recon.md`, the foundation contract, the contract of any feature it depends on, and the `feature-planner` skill. When the session cannot spawn agents, plan features one at a time in wave order.
 - A single feature in an existing app is written directly.
 
 Each feature starts with its README contract, then the layer files in number order, as in `layer-catalog.md`.
