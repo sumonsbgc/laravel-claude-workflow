@@ -25,6 +25,13 @@ claude plugin update lw@laravel-workflow   # later, to upgrade
 
 To install from a local clone instead, use its path: `claude plugin marketplace add /path/to/laravel-workflow`.
 
+To take only the planning skill (`feature-planner`, which works standalone), install it from
+[skills.sh](https://skills.sh):
+
+```bash
+npx skills add sumonsbgc/laravel-claude-workflow --skill feature-planner
+```
+
 Commands are `/lw:*` in both installs (`/lw:task`, `/lw:write-task`, `/lw:sync`, …). **Upgrading from
 2.5 or earlier, where the prefix was `/laravel:`:** plugin users run
 `claude plugin uninstall laravel@laravel-workflow` and then install `lw@laravel-workflow`; file
