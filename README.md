@@ -64,6 +64,12 @@ with unverifiable `[browser]` criteria closes as `done` (noted in its log) inste
 from the environment, never from a project file, because Claude can edit project files but cannot
 change the environment it was started with.
 
+**Push mode.** `/lw:setup` asks once how pushing should work. *Manual* (the default, recommended):
+Claude commits and syncs but never pushes; you publish with `/lw:sync` or `git-sync.sh push` in your
+own terminal. *Claude may push*: set `LARAVEL_WF_ALLOW_PUSH=1` yourself in your shell profile or your
+user-level `~/.claude/settings.json` and restart; it also lets Claude open and merge pull requests.
+Setup never writes that setting for you, for the same reason as the approval switch.
+
 ## Why it exists
 
 A general-purpose agent writing Laravel makes the same handful of expensive mistakes, over and
@@ -166,7 +172,7 @@ Detection never fails loudly — an undetected value comes back empty and the ho
 ## Development
 
 ```bash
-./test.sh                      # 703 assertions against throwaway fixtures
+./test.sh                      # 708 assertions against throwaway fixtures
 ./test.sh -v                   # ...and print each one
 bash evals/run.sh --reference  # free: proves the eval checks against a real Laravel 13 app (5/5)
 bash evals/run.sh              # real agent runs (API spend) — compare evals/results/ across changes

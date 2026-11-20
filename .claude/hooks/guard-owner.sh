@@ -45,7 +45,7 @@ push_allowed() {
   local transcript last
   transcript="$(printf '%s' "$INPUT" | jq -r '.transcript_path // ""' 2>/dev/null)"
   [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
-  last="$(jq -c 'select(.type == "user" and (.isMeta | not) and (.isSidechain | not) and (.message.content | type) == "string") | .message.content' "$transcript" 2>/dev/null | tail -n 1)"
+  last="$(jq -cR 'fromjson? | objects | select(.type == "user" and (.isMeta | not) and (.isSidechain | not) and ((.message? | objects | .content?) | type) == "string") | .message.content' "$transcript" 2>/dev/null | tail -n 1)"
   [[ "$last" == *'<command-name>/lw:sync</command-name>'* ]]
 }
 check_sync_push() {
