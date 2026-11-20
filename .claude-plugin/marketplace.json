@@ -1,7 +1,8 @@
 {
 	"name": "laravel-workflow",
 	"owner": {
-		"name": "Mohammad Sumon"
+		"name": "Mohammad Sumon",
+		"email": "sumonsbgc@gmail.com"
 	},
 	"description": "The laravel-workflow kit as a Claude Code plugin.",
 	"plugins": [
