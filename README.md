@@ -1,7 +1,11 @@
 # laravel-workflow
 
-A Claude Code kit for **Laravel + Blade** projects: three skills, eight commands, eight agents,
-and a set of hooks that stop the mistakes which only surface in production. Version 2.4.
+A Claude Code kit for **Laravel + Blade** projects: four skills, ten commands, nine agents,
+and a set of hooks that stop the mistakes which only surface in production. Version 2.6.
+
+It plans work (small tasks, or a whole app or feature as per-layer plan files with the full code),
+builds it task by task, has a second agent verify each task, and blocks the common production
+mistakes while it does. See `docs/guide.html` (also `laravel-workflow-guide.pdf`) for the guide.
 
 It is not a Laravel application. It is a directory you install *into* one.
 
@@ -14,10 +18,12 @@ It is not a Laravel application. It is a directory you install *into* one.
 Or as a Claude Code plugin, with nothing copied into the project:
 
 ```bash
-claude plugin marketplace add /path/to/laravel-workflow
+claude plugin marketplace add sumonsbgc/laravel-claude-workflow
 claude plugin install laravel@laravel-workflow
 claude plugin update laravel@laravel-workflow   # later, to upgrade
 ```
+
+To install from a local clone instead, use its path: `claude plugin marketplace add /path/to/laravel-workflow`.
 
 The commands stay `/laravel:*`. The helpers then live in the plugin's folder, not `.claude/hooks`;
 the session-start report prints that path ("Kit helpers"), so use it wherever this README says
@@ -155,10 +161,35 @@ Detection never fails loudly — an undetected value comes back empty and the ho
 ## Development
 
 ```bash
-./test.sh                      # 617 assertions against throwaway fixtures
+./test.sh                      # 671 assertions against throwaway fixtures
 ./test.sh -v                   # ...and print each one
 bash evals/run.sh --reference  # free: proves the eval checks against a real Laravel 13 app (5/5)
 bash evals/run.sh              # real agent runs (API spend) — compare evals/results/ across changes
 ```
 
 Run `./test.sh` after touching any hook or the installer; run the eval after any prompt change.
+
+## What it runs and what it touches
+
+The hooks are plain shell scripts that run on your machine with your user's permissions. Read them
+before installing: they are in `.claude/hooks/` and listed in "The hooks" above.
+
+- **Reads:** your project's files (`composer.json`, `package.json`, config, the installed Tailwind
+  version, the files Claude is editing) to detect the stack and check edits.
+- **Writes:** inside the project's `.claude/` folder (task files, plans, the project-context file,
+  caches, metrics in `.claude/.cache/`), plus `.gitignore` when the installer adds the cache folder.
+  Your own formatter (Pint or Prettier) rewrites files Claude edits.
+- **Runs your commands:** the project's own test, lint, static-analysis and asset-build commands
+  when a task is verified.
+- **Git:** `git-sync.sh` commits, pulls and pushes only when you type `/laravel:sync`, and
+  `run-tasks.sh --checkpoint` makes local commits on a new branch. Claude is blocked from pushing
+  on its own.
+- **Network:** none of its own. It makes no HTTP requests and sends no telemetry. The only network
+  traffic is git talking to your configured remote during `/laravel:sync`, and whatever your own
+  project commands do.
+- **Limits:** the guards slow accidents down; they are not a security boundary. Keep production
+  secrets out of the project folder, or use Claude Code's sandbox.
+
+## License
+
+MIT. See `LICENSE`.

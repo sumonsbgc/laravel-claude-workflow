@@ -8,6 +8,7 @@
 - **New:** `/laravel:plan-status` (progress per wave: done, blocked, in review, next runnable), the `laravel-architect` agent, and `feature-blueprint` with its layer catalog, workflow, templates and two evals.
 - Tested by running the skill against two cases with and without it: it passed 17 of 17 checks and the baseline 9 of 17 (single run each).
 - Guide PDF rewritten for 2.6 (planning chapter, new command and agent, 2.5 approval switch).
+- **Ready to share:** MIT `LICENSE`, `license`, `repository`, `homepage` and `icon` in the plugin manifest, an icon, install instructions that use the GitHub repository, and a README section saying what the hooks read, write, run and send (nothing leaves the machine except git during `/laravel:sync`). The README now states the right counts (four skills, ten commands, nine agents).
 
 ## 2.5.0 — 2026-11-11
 - **Approval can be switched off.** `REQUIRE_APPROVAL=off` in `.claude/workflow.conf` (or `LARAVEL_WF_REQUIRE_APPROVAL=off` in the environment) removes both user steps: `tasks.sh new` writes `status: todo` instead of `draft`, `next` and `start` take drafts whose dependencies are done, `close` after an `UNVERIFIED` verdict ends in `done` with a log line saying so instead of `review`, and `approve`/`accept` run anywhere, so the owner guard no longer blocks them. `run-tasks.sh` runs drafts instead of stopping on them, and the session report says approval is off so Claude never stops to ask. Unchanged: the verifier and the verdict gate, the ban on shell edits of a task's `status:` line, and the push rule.

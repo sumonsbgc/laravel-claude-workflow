@@ -108,14 +108,15 @@ table.set td:nth-child(2) { width: 26%; }
 
 <div class="step"><div class="dot">A</div><div>
 <h4>Install as a plugin</h4>
-<pre>claude plugin marketplace add ~/www/hobbies/laravel-workflow
+<pre>claude plugin marketplace add sumonsbgc/laravel-claude-workflow
 claude plugin install laravel@laravel-workflow</pre>
 <p>The commands are the same <code>/laravel:*</code>. A plugin can't carry permission rules, so extra checks take their place: one approves only the kit's own helpers, your test, lint and build commands, a few read-only artisan commands and Boost's read-only tools; one blocks Claude from reading <code>.env</code> files, keys, <code>auth.json</code> and <code>storage/</code>. Your own deny and ask rules always win.</p>
 </div></div>
 
 <div class="step"><div class="dot">B</div><div>
 <h4>Or copy it into your app</h4>
-<pre>cd ~/www/hobbies/laravel-workflow
+<pre>git clone https://github.com/sumonsbgc/laravel-claude-workflow
+cd laravel-claude-workflow
 ./install.sh /path/to/your-laravel-app          <span class="c"># add --dry-run to preview</span></pre>
 <p>This copies the kit into <code>your-laravel-app/.claude/</code> and merges <code>settings.json</code>. The old file is backed up, older kit entries are replaced, and permission rules that earlier versions shipped and later removed are dropped. If PHPStan is installed, it also records the findings that already exist, so Claude is held only to new ones.</p>
 </div></div>

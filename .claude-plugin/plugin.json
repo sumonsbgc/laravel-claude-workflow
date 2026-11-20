@@ -5,6 +5,10 @@
   "author": {
     "name": "Mohammad Sumon"
   },
+  "license": "MIT",
+  "repository": "https://github.com/sumonsbgc/laravel-claude-workflow",
+  "homepage": "https://github.com/sumonsbgc/laravel-claude-workflow#readme",
+  "icon": "./.claude-plugin/icon.png",
   "keywords": [
     "laravel",
     "php",
